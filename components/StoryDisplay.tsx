@@ -46,6 +46,12 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
   };
 
   const handleDownloadVideo = async () => {
+    // Si c'est une simulation, on ne peut pas télécharger de vidéo
+    if (story.isVideoSimulated) {
+        alert("Le téléchargement vidéo n'est pas disponible pour cette simulation.");
+        return;
+    }
+
     if (!story.videoUrl) return;
     try {
         const response = await fetch(story.videoUrl);
@@ -61,9 +67,17 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
     if (!story.audioUrl) return;
 
     try {
-      // Utilisation de l'utilitaire centralisé pour créer le fichier WAV
-      const wavBlob = createWavBlob(story.audioUrl);
-      downloadFile(wavBlob, `${story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.wav`);
+      // Vérification simple du format (ElevenLabs MP3 vs Legacy WAV)
+      if (story.audioUrl.startsWith('data:audio/mpeg') || story.audioUrl.startsWith('http')) {
+         // C'est du MP3 (ElevenLabs), on le télécharge directement
+         fetch(story.audioUrl)
+            .then(res => res.blob())
+            .then(blob => downloadFile(blob, `${story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`));
+      } else {
+          // Legacy PCM/WAV
+          const wavBlob = createWavBlob(story.audioUrl);
+          downloadFile(wavBlob, `${story.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.wav`);
+      }
     } catch (e) {
       console.error("Erreur lors du téléchargement audio", e);
       alert("Erreur lors de la préparation du fichier audio.");
@@ -76,7 +90,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
     setIsRegenerating(true);
     try {
         // On détermine si on doit essayer de refaire une vidéo ou juste une image
-        const targetMedia = story.videoUrl || story.videoError ? MediaType.VIDEO : MediaType.TEXT_WITH_IMAGE;
+        const targetMedia = story.videoUrl || story.isVideoSimulated ? MediaType.VIDEO : MediaType.TEXT_WITH_IMAGE;
         
         const result = await regenerateStoryImage(story.imagePrompt, ImageStyle.DIGITAL_ART, targetMedia, story.videoFormat);
         
@@ -84,7 +98,8 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
             ...prev,
             imageUrl: result.imageUrl,
             videoUrl: result.videoUrl,
-            videoError: result.videoError // On met à jour l'erreur si elle persiste ou apparait
+            isVideoSimulated: result.isVideoSimulated,
+            videoError: result.videoError
         }));
     } catch (e) {
         console.error("Failed to regenerate", e);
@@ -122,7 +137,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
             </div>
             
             {/* Warning Banner for Video Errors */}
-            {story.videoError && (
+            {story.videoError && !story.isVideoSimulated && (
                 <div className="mb-8 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl flex items-start gap-3">
                     <svg className="w-6 h-6 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -131,7 +146,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
                         <h4 className="text-amber-800 dark:text-amber-200 font-semibold text-sm">Échec de la génération vidéo</h4>
                         <p className="text-amber-700 dark:text-amber-200/70 text-sm mt-1">
                             {story.videoError} <br/>
-                            Une image statique a été générée à la place. Vous pouvez réessayer en cliquant sur "Régénérer" ci-dessous.
+                            Une image statique a été générée à la place.
                         </p>
                     </div>
                 </div>
@@ -159,7 +174,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
                   </button>
                 )}
 
-                {story.videoUrl && (
+                {story.videoUrl && !story.isVideoSimulated && (
                   <button 
                     onClick={handleDownloadVideo}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium transition-colors border border-slate-200 dark:border-slate-700"
@@ -177,7 +192,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
                     title="Télécharger l'audio"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
-                    Audio (.wav)
+                    Audio
                   </button>
                 )}
             </div>
@@ -189,7 +204,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
                 {(story.imageUrl || story.videoUrl) && (
                     <div className="w-full lg:w-1/2 shrink-0 flex flex-col gap-3">
                         <div className="group relative rounded-xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-100 dark:bg-slate-800">
-                            {story.videoUrl ? (
+                            {story.videoUrl && !story.isVideoSimulated ? (
                                 <video 
                                     src={story.videoUrl} 
                                     controls 
@@ -199,17 +214,33 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
                                     poster={story.imageUrl}
                                 />
                             ) : (
-                                <>
+                                <div className="relative overflow-hidden w-full aspect-video">
                                     <img 
                                         src={story.imageUrl} 
                                         alt={story.title} 
-                                        className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                                        className={`w-full h-full object-cover transition-transform duration-[20s] ease-linear ${story.isVideoSimulated ? 'scale-125 hover:scale-100 animate-[kenburns_20s_infinite_alternate]' : 'group-hover:scale-105 duration-700'}`}
                                     />
+                                    {/* Overlay Simulation Vidéo */}
+                                    {story.isVideoSimulated && (
+                                        <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+                                             <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 flex items-center gap-2">
+                                                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                                 <span className="text-white text-xs font-semibold tracking-wide">APERÇU VIDÉO (SIMULATION)</span>
+                                             </div>
+                                             <div className="absolute bottom-4 left-0 right-0 text-center">
+                                                 <span className="text-[10px] text-white/80 bg-black/40 px-2 py-1 rounded">Génération vidéo complète bientôt disponible</span>
+                                             </div>
+                                        </div>
+                                    )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 pointer-events-none"></div>
-                                    <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
-                                        <p className="text-xs text-white/90 italic opacity-80">Illustration générée par IA</p>
-                                    </div>
-                                </>
+                                    
+                                    <style>{`
+                                        @keyframes kenburns {
+                                            0% { transform: scale(1) translate(0,0); }
+                                            100% { transform: scale(1.25) translate(-1%, -1%); }
+                                        }
+                                    `}</style>
+                                </div>
                             )}
                         </div>
                         

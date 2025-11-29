@@ -55,6 +55,7 @@ export interface GeneratedStory {
   imagePrompt?: string;
   videoError?: string; // Message d'erreur spécifique si la génération vidéo échoue
   videoFormat?: VideoFormat;
+  isVideoSimulated?: boolean; // Indique si la vidéo est une simulation (image animée) faute d'API
 }
 
 export interface HistoryItem extends GeneratedStory {
