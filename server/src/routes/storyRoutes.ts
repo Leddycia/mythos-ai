@@ -13,9 +13,9 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
       take: 20 // Limite pour performance
     });
-    res.json(stories);
+    (res as any).json(stories);
   } catch (error) {
-    res.status(500).json({ message: "Erreur chargement historique" });
+    (res as any).status(500).json({ message: "Erreur chargement historique" });
   }
 });
 
@@ -32,10 +32,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       }
     });
     
-    res.json(story);
+    (res as any).json(story);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Erreur sauvegarde" });
+    (res as any).status(500).json({ message: "Erreur sauvegarde" });
   }
 });
 
@@ -48,9 +48,9 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
         userId: req.user!.userId // Sécurité: on ne supprime que ses propres histoires
       }
     });
-    res.json({ message: "Histoire supprimée" });
+    (res as any).json({ message: "Histoire supprimée" });
   } catch (error) {
-    res.status(500).json({ message: "Erreur suppression" });
+    (res as any).status(500).json({ message: "Erreur suppression" });
   }
 });
 
