@@ -10,27 +10,27 @@ interface WelcomePageProps {
 
 const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onViewHistory }) => {
   return (
-    <div className="max-w-7xl mx-auto space-y-20 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-7xl mx-auto space-y-12 md:space-y-16 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* --- HERO SECTION --- */}
-      <div className="relative text-center space-y-6 py-10 lg:py-16">
+      <div className="relative text-center space-y-6 py-6 md:py-16">
         {/* Decorative Blobs */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/20 dark:bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-fuchsia-500/20 dark:bg-fuchsia-500/10 rounded-full blur-[80px] pointer-events-none animate-pulse"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[600px] aspect-square bg-indigo-500/20 dark:bg-indigo-500/10 rounded-full blur-[80px] md:blur-[100px] pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[400px] aspect-square bg-fuchsia-500/20 dark:bg-fuchsia-500/10 rounded-full blur-[60px] md:blur-[80px] pointer-events-none animate-pulse"></div>
 
-        <div className="relative z-10 flex flex-col items-center">
+        <div className="relative z-10 flex flex-col items-center px-4">
           
           {/* BIG APP TITLE */}
-          <h1 className="text-7xl md:text-9xl font-serif font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-indigo-400 animate-in fade-in zoom-in-50 duration-1000 pb-2 drop-shadow-sm">
+          <h1 className="text-5xl sm:text-7xl md:text-9xl font-serif font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-indigo-400 animate-in fade-in zoom-in-50 duration-1000 pb-2 drop-shadow-sm">
             MythosAI
           </h1>
 
-          <h2 className="text-4xl md:text-6xl font-serif font-bold tracking-tight text-slate-900 dark:text-white mt-8">
+          <h2 className="text-3xl sm:text-4xl md:text-6xl font-serif font-bold tracking-tight text-slate-900 dark:text-white mt-4 md:mt-8 leading-tight">
             Apprendre n'a jamais été <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-fuchsia-600 dark:from-indigo-400 dark:to-fuchsia-400">aussi captivant.</span>
           </h2>
           
-          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed mt-6">
+          <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed mt-6">
             Bonjour <strong>{userName}</strong>. Transformez n'importe quel sujet en une expérience interactive : leçons, histoires, images et vidéos générées instantanément par l'IA.
           </p>
 

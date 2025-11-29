@@ -122,10 +122,10 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ story: initialStory, onBack
         {/* Top Decorative Bar */}
         <div className="h-2 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500" />
         
-        <div className="p-8 md:p-12">
+        <div className="p-6 md:p-10 lg:p-12">
             {/* Header Section */}
-            <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-fuchsia-600 dark:from-indigo-200 dark:to-white mb-6 leading-tight">
+            <div className="text-center mb-10 md:mb-12">
+                <h1 className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-fuchsia-600 dark:from-indigo-200 dark:to-white mb-6 leading-tight">
                 {story.title}
                 </h1>
                 
