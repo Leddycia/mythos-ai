@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
 import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
@@ -6,11 +5,10 @@ import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
 // --- SERVICE AUDIO ELEVENLABS ---
 
 export const generateElevenLabsAudio = async (text: string): Promise<string> => {
-    // Nettoyage basique du texte pour éviter de lire le markdown ou les titres résiduels
     const cleanText = text
-        .replace(/[*#_]/g, '') // Enlève *, #, _
-        .replace(/\[.*?\]/g, '') // Enlève les annotations entre crochets
-        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '') // Enlève les préfixes courants
+        .replace(/[*#_]/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '')
         .trim();
 
     try {
@@ -22,7 +20,7 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
             },
             body: JSON.stringify({
                 text: cleanText,
-                model_id: "eleven_multilingual_v2", // Meilleur support pour FR/Créole
+                model_id: "eleven_multilingual_v2",
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75,
@@ -53,17 +51,14 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
 // --- SERVICE IMAGE GRATUIT (Pollinations.ai) ---
 
 const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<string> => {
-    // Construction d'un prompt amélioré pour le modèle Flux/SDXL de Pollinations
     const enhancedPrompt = `${prompt}, ${style} style, high quality, detailed, 8k resolution, cinematic lighting`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
-    // Utilisation du modèle 'flux' pour une meilleure qualité
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&model=flux&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
 
     try {
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         
-        // Conversion en Base64 pour compatibilité avec l'affichage
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -81,11 +76,9 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
 
 // --- SERVICE VIDEO (SIMULATION) ---
 
-// L'API tierce étant instable/payante, nous simulons la vidéo pour l'instant
-// en renvoyant l'image elle-même. Le front-end appliquera un effet Ken Burns.
 const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<string> => {
     console.log("Simulation vidéo active...");
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Petit délai pour l'effet de chargement
+    await new Promise(resolve => setTimeout(resolve, 1500));
     return base64ImageWithHeader;
 }
 
@@ -107,7 +100,6 @@ export const regenerateStoryImage = async (
   videoFormat?: VideoFormat
 ): Promise<{ imageUrl: string; videoUrl?: string; videoError?: string; videoFormat?: VideoFormat; isVideoSimulated?: boolean }> => {
   
-  // 1. Génération Image (Via API Gratuite)
   let imageUrl = "";
   try {
       imageUrl = await generateFreeImage(currentPrompt, style);
@@ -115,7 +107,6 @@ export const regenerateStoryImage = async (
       throw new Error("La régénération de l'image a échoué.");
   }
 
-  // 2. Si c'était une vidéo, on simule la vidéo
   let videoUrl: string | undefined;
   let isVideoSimulated = false;
 
@@ -128,7 +119,13 @@ export const regenerateStoryImage = async (
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // VÉRIFICATION CRITIQUE DE LA CLÉ API
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === 'undefined') {
+      throw new Error("Clé API Google Gemini manquante. Veuillez configurer la variable d'environnement API_KEY dans Vercel (Settings > Environment Variables).");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     // === 1. TEXT GENERATION (Foundation) ===
@@ -144,7 +141,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let taskDescription = "";
     let constraints = "";
 
-    // CONTRAINTES STRICTES DE NARRATION
     const narrativeConstraints = `
     RÈGLES DE NARRATION STRICTES :
     1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé", "Résumé", "Conclusion".
@@ -153,7 +149,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     4. Expliquez les concepts directement dans le flux du récit.
     `;
 
-    // CONFIGURATION DES CONTRAINTES DE LONGUEUR
     if (isVideoMode) {
         constraints = `
         CONTRAINTE VIDEO (15s) :
@@ -229,10 +224,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
         try {
             const cultureStyle = request.includeHaitianCulture ? "Caribbean aesthetic, vibrant colors, " : "";
             const finalImagePrompt = `${imagePromptText}, ${cultureStyle}`;
-            
-            // Appel à l'API Gratuite
             imageUrl = await generateFreeImage(finalImagePrompt, request.imageStyle);
-            
         } catch (imgError) {
             console.warn("Image generation failed:", imgError);
         }
@@ -244,7 +236,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     
     if (request.mediaType === MediaType.VIDEO) {
         if (imageUrl) {
-             // On utilise l'image comme source de vidéo simulée
              videoUrl = await simulateVideoFromImage(imageUrl);
              isVideoSimulated = true;
         }
@@ -271,6 +262,10 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
 
   } catch (error: any) {
     console.error("Content generation failed:", error);
+    // Renvoi de l'erreur avec un message plus explicite si c'est la clé
+    if (error.message?.includes('API key')) {
+        throw new Error("Problème de configuration API. Vérifiez votre clé API_KEY sur Vercel.");
+    }
     throw new Error(error.message || "Échec de la génération.");
   }
 };
