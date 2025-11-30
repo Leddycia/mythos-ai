@@ -16,7 +16,7 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'xi-api-key': ELEVENLABS_API_KEY,
+                'xi-api-key': "81454163426af0e27eda7e64fb3da07d0e5e91dece59b954e1589c8276df58c5",
             },
             body: JSON.stringify({
                 text: cleanText,
