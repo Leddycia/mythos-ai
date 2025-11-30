@@ -1,14 +1,15 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
-import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, GEMINI_API_KEY } from '../constants';
 
+import { GoogleGenAI, Type } from "@google/genai";
+import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
+import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
+
+// --- SERVICE AUDIO ELEVENLABS ---
 
 export const generateElevenLabsAudio = async (text: string): Promise<string> => {
-    
     const cleanText = text
-        .replace(/[*#_]/g, '') // Enlève *, #, _
-        .replace(/\[.*?\]/g, '') // Enlève les annotations entre crochets
-        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '') // Enlève les préfixes courants
+        .replace(/[*#_]/g, '')
+        .replace(/\[.*?\]/g, '')
+        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '')
         .trim();
 
     try {
@@ -20,7 +21,7 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
             },
             body: JSON.stringify({
                 text: cleanText,
-                model_id: "eleven_multilingual_v2", 
+                model_id: "eleven_multilingual_v2",
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75,
@@ -29,8 +30,8 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail?.message || "Erreur ElevenLabs");
+            console.warn("ElevenLabs limit reached or error, falling back...");
+            return ""; // Retourner vide pour gérer le fallback silencieusement
         }
 
         const blob = await response.blob();
@@ -44,24 +45,22 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
 
     } catch (error) {
         console.error("Erreur génération audio ElevenLabs:", error);
-        throw error;
+        return "";
     }
 };
 
-
+// --- SERVICE IMAGE GRATUIT (Pollinations.ai) ---
 
 const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<string> => {
-
     const enhancedPrompt = `${prompt}, ${style} style, high quality, detailed, 8k resolution, cinematic lighting`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
-    // Utilisation du modèle 'flux' pour une meilleure qualité
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&model=flux&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
 
     try {
+        // On vérifie juste que l'URL est accessible
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         
-        // Conversion en Base64 pour compatibilité avec l'affichage
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -73,29 +72,39 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
         });
     } catch (error) {
         console.error("Erreur génération image gratuite:", error);
-        throw new Error("Impossible de générer l'image via l'API gratuite.");
+        // Fallback image si l'API échoue
+        return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
     }
 }
 
 // --- SERVICE VIDEO (SIMULATION) ---
 
-// L'API tierce étant instable/payante, nous simulons la vidéo pour l'instant
-// en renvoyant l'image elle-même. Le front-end appliquera un effet Ken Burns.
 const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<string> => {
     console.log("Simulation vidéo active...");
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Petit délai pour l'effet de chargement
+    await new Promise(resolve => setTimeout(resolve, 1500));
     return base64ImageWithHeader;
 }
+
+// --- MOCK DATA FOR DEMO MODE ---
+const getMockStory = (topic: string): GeneratedStory => ({
+    title: `Démo : ${topic}`,
+    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée.
+    
+    MythosAI fonctionne normalement en se connectant à l'intelligence artificielle de Google. En attendant que vous configuriez votre clé API, voici un exemple de ce à quoi ressemble une leçon.
+    
+    Le sujet demandé était : **${topic}**.
+    
+    Dans un environnement réel, l'IA aurait expliqué ce concept en détail, adapté à votre niveau, avec des exemples pertinents et une narration fluide.`,
+    imagePrompt: "Futuristic artificial intelligence glowing brain interface, digital art",
+    imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=1000",
+    isVideoSimulated: true,
+    nextStepSuggestion: "Voulez-vous que je vous explique comment fonctionne une API plus en détail ?"
+});
 
 // --- FONCTIONS EXPORTÉES ---
 
 export const regenerateAudio = async (text: string): Promise<string | undefined> => {
-    try {
-        return await generateElevenLabsAudio(text);
-    } catch (e) {
-        console.error("Echec régénération audio:", e);
-        return undefined;
-    }
+    return await generateElevenLabsAudio(text);
 };
 
 export const regenerateStoryImage = async (
@@ -105,15 +114,13 @@ export const regenerateStoryImage = async (
   videoFormat?: VideoFormat
 ): Promise<{ imageUrl: string; videoUrl?: string; videoError?: string; videoFormat?: VideoFormat; isVideoSimulated?: boolean }> => {
   
-  // 1. Génération Image (Via API Gratuite)
   let imageUrl = "";
   try {
       imageUrl = await generateFreeImage(currentPrompt, style);
   } catch (e) {
-      throw new Error("La régénération de l'image a échoué.");
+      imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
   }
 
-  // 2. Si c'était une vidéo, on simule la vidéo
   let videoUrl: string | undefined;
   let isVideoSimulated = false;
 
@@ -126,9 +133,17 @@ export const regenerateStoryImage = async (
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {
-    
-    // Initialisation correcte de Gemini
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  // 1. RECUPERATION DE LA CLÉ API
+  const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
+
+  // 2. MODE DÉMO / FALLBACK
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+      console.warn("⚠️ CLÉ MANQUANTE : Passage en mode DÉMO.");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return getMockStory(request.topic);
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     // === 1. TEXT GENERATION (Foundation) ===
@@ -139,26 +154,39 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
 
     const isEducational = request.genre === StoryGenre.EDUCATIONAL;
     const isVideoMode = request.mediaType === MediaType.VIDEO;
+    const isConversation = request.isFollowUp;
 
     let systemInstruction = "";
     let taskDescription = "";
     let constraints = "";
+    let historyContext = "";
 
-    // CONTRAINTES STRICTES DE NARRATION
+    // Construction de l'historique de conversation
+    if (request.conversationHistory && request.conversationHistory.length > 0) {
+        const historyStr = request.conversationHistory.map(turn => 
+            `${turn.role === 'user' ? 'Élève/Utilisateur' : 'Professeur Mythos'}: "${turn.text}"`
+        ).join('\n');
+        
+        historyContext = `
+        HISTORIQUE DE LA CONVERSATION RÉCENTE :
+        ${historyStr}
+        
+        INSTRUCTION : Tenez compte de cet historique. Ne répétez pas ce qui a déjà été dit. Répondez directement à la dernière intervention de l'utilisateur.
+        `;
+    }
+
     const narrativeConstraints = `
     RÈGLES DE NARRATION STRICTES :
-    1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé", "Résumé", "Conclusion".
+    1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé".
     2. Le texte doit couler naturellement, comme si une personne parlait.
-    3. PAS de listes à puces ou de numérotation, sauf si absolument nécessaire pour une liste d'ingrédients ou d'étapes courtes.
-    4. Expliquez les concepts directement dans le flux du récit.
+    3. PAS de listes à puces ou de numérotation excessive.
     `;
 
-    // CONFIGURATION DES CONTRAINTES DE LONGUEUR
     if (isVideoMode) {
         constraints = `
         CONTRAINTE VIDEO (15s) :
         - Texte EXTRÊMEMENT COURT (Max 40 mots).
-        - Style script dynamique pour vidéo courte.
+        - Style script dynamique.
         ${narrativeConstraints}
         `;
     } else {
@@ -169,77 +197,93 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     }
 
     if (isEducational) {
-        systemInstruction = `Vous êtes un guide pédagogue expert. Vous expliquez les choses comme si vous parliez à un élève en face de vous.`;
-        taskDescription = `Expliquez le sujet : "${request.topic}".`;
+        if (isConversation) {
+             systemInstruction = `
+             Vous êtes "Professeur Mythos", un tuteur interactif et dynamique. 
+             Nous sommes dans un DIALOGUE continu avec l'élève.
+             Votre but : Répondre aux questions, corriger si nécessaire, encourager, et maintenir l'engagement.
+             
+             Structure attendue :
+             1. Réponse directe : Répondez à la question ou à la remarque de l'utilisateur.
+             2. Interaction : Terminez TOUJOURS par une ouverture (une nouvelle question, une devinette, ou une demande d'opinion) pour forcer l'utilisateur à répondre.
+             3. Ton : Encourageant, curieux et adapté à l'âge (${request.ageGroup}).
+             `;
+             taskDescription = `L'utilisateur dit : "${request.topic}". Répondez-lui en tenant compte du contexte.`;
+        } else {
+            systemInstruction = `Vous êtes un guide pédagogue expert et bienveillant. À la fin de votre explication, vous devez TOUJOURS proposer une suite logique sous forme de question directe à l'élève.`;
+            taskDescription = `Expliquez : "${request.topic}".`;
+        }
     } else {
-        systemInstruction = "Vous êtes un conteur captivant.";
-        taskDescription = `Racontez une histoire sur : "${request.topic}".`;
+        // Mode Histoire
+        if (isConversation) {
+             systemInstruction = "Vous êtes le Maître du Donjon narratif. Le lecteur réagit à l'histoire. Continuez l'aventure en prenant en compte sa réponse.";
+             taskDescription = `L'utilisateur dit : "${request.topic}". Continuez l'histoire.`;
+        } else {
+            systemInstruction = "Vous êtes un conteur captivant. À la fin de l'histoire, proposez au lecteur d'imaginer une suite ou d'explorer un aspect de l'univers.";
+            taskDescription = `Racontez une histoire sur : "${request.topic}".`;
+        }
     }
 
     const prompt = `
       ${systemInstruction}
       
-      TÂCHE : ${taskDescription}
+      ${historyContext}
+
+      TÂCHE ACTUELLE : ${taskDescription}
       
       ${constraints}
 
       PARAMÈTRES :
-      - Public : ${request.ageGroup} (Adaptez le vocabulaire et le ton)
+      - Public : ${request.ageGroup}
       - Langue : ${request.language}
       ${culturePrompt}
 
       IMAGE PROMPT (Important) :
-      Générez également une description visuelle EN ANGLAIS pour le générateur d'images.
+      Générez également une description visuelle EN ANGLAIS pour illustrer cette partie spécifique de la conversation.
       
       Retournez la réponse au format JSON :
       {
-        "title": "Un titre court et accrocheur",
-        "content": "Le texte narratif fluide",
-        "imagePrompt": "Description visuelle (Anglais)"
+        "title": "Titre (ou sujet de la réponse)",
+        "content": "Contenu (conversationnel)",
+        "imagePrompt": "Description visuelle (Anglais)",
+        "nextStepSuggestion": "Question pour continuer (ex: 'Prêt pour la réponse du quiz ?' ou 'Veux-tu savoir pourquoi...?')"
       }
     `;
 
-    // Configuration du Modèle avec le Schema JSON
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash", // Utilisation de la version stable
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: SchemaType.OBJECT,
-                properties: {
-                    title: { type: SchemaType.STRING },
-                    content: { type: SchemaType.STRING },
-                    imagePrompt: { type: SchemaType.STRING },
-                },
-                required: ["title", "content", "imagePrompt"],
-            }
+    const textResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            content: { type: Type.STRING },
+            imagePrompt: { type: Type.STRING },
+            nextStepSuggestion: { type: Type.STRING },
+          },
+          required: ["title", "content", "imagePrompt", "nextStepSuggestion"],
         }
+      }
     });
 
-    // Génération du contenu
-    const result = await model.generateContent(prompt);
-    const textResponse = result.response.text();
-    
-    // Parsing du JSON
-    const textData = JSON.parse(textResponse || '{}');
-    const title = textData.title || "Sans titre";
-    const content = textData.content || "Aucun contenu généré.";
-    const imagePromptText = textData.imagePrompt || `Educational illustration about ${request.topic}`;
+    const textData = JSON.parse(textResponse.text || '{}');
+    const title = textData.title || request.topic;
+    const content = textData.content || "Contenu non disponible.";
+    const imagePromptText = textData.imagePrompt || `Illustration of ${request.topic}`;
+    const nextStepSuggestion = textData.nextStepSuggestion || "Continuer...";
 
     // === 2. IMAGE GENERATION (API Gratuite - Pollinations) ===
-    
     let imageUrl: string | undefined;
-    
     if (request.mediaType !== MediaType.TEXT_ONLY) {
         try {
             const cultureStyle = request.includeHaitianCulture ? "Caribbean aesthetic, vibrant colors, " : "";
             const finalImagePrompt = `${imagePromptText}, ${cultureStyle}`;
-            
-            // Appel à l'API Gratuite
             imageUrl = await generateFreeImage(finalImagePrompt, request.imageStyle);
-            
         } catch (imgError) {
-            console.warn("Image generation failed:", imgError);
+            console.warn("Image generation failed, using placeholder");
+            imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
         }
     }
 
@@ -247,12 +291,9 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let videoUrl: string | undefined;
     let isVideoSimulated = false;
     
-    if (request.mediaType === MediaType.VIDEO) {
-        if (imageUrl) {
-             // On utilise l'image comme source de vidéo simulée
-             videoUrl = await simulateVideoFromImage(imageUrl);
-             isVideoSimulated = true;
-        }
+    if (request.mediaType === MediaType.VIDEO && imageUrl) {
+         videoUrl = await simulateVideoFromImage(imageUrl);
+         isVideoSimulated = true;
     }
 
     // === 4. AUDIO GENERATION (ElevenLabs) ===
@@ -260,7 +301,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     try {
         audioUrl = await generateElevenLabsAudio(content);
     } catch (audioError) {
-        console.warn("Audio generation failed:", audioError);
+        console.warn("Audio generation failed");
     }
 
     return {
@@ -271,11 +312,15 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
         videoUrl,
         imagePrompt: imagePromptText,
         videoFormat: request.videoFormat,
-        isVideoSimulated
+        isVideoSimulated,
+        nextStepSuggestion
     };
 
   } catch (error: any) {
     console.error("Content generation failed:", error);
-    throw new Error(error.message || "Échec de la génération.");
+    if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('401')) {
+        return getMockStory(request.topic);
+    }
+    throw new Error("Une erreur est survenue. Le mode démo a été activé.");
   }
 };

@@ -1,3 +1,4 @@
+
 import { StoryGenre, AgeGroup, ImageStyle, MediaType, VideoFormat } from './types';
 
 export const STORY_GENRES = [
@@ -45,15 +46,10 @@ export const LANGUAGES = [
 
 export const APP_NAME = "MythosAI";
 
-// --- SÉCURITÉ : Récupération des clés via les variables d'environnement ---
-
-// Gemini (Ajouté car manquant avant)
-export const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-// Vidéo (Pixazo)
-export const VIDEO_API_KEY = import.meta.env.VITE_VIDEO_API_KEY;
+// Configuration de l'API Vidéo Personnalisée (Pixazo / Open-Sora)
+export const VIDEO_API_KEY = 'sk-oqivbKO43LHw5qGaoTKvY24UQhKIXjbP';
 export const VIDEO_API_URL = 'https://gateway.pixazo.ai/sora-video/v1/video/i2v/generate';
 
-// ElevenLabs
-export const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
-export const ELEVENLABS_VOICE_ID = import.meta.env.VITE_ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+// Configuration ElevenLabs
+export const ELEVENLABS_API_KEY = '81454163426af0e27eda7e64fb3da07d0e5e91dece59b954e1589c8276df58c5';
+export const ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel (Voice ID par défaut, peut être changé)

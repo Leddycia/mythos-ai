@@ -35,6 +35,12 @@ export enum VideoFormat {
   MOV = 'mov'
 }
 
+export interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string; // Pour l'utilisateur c'est juste du texte
+  aiResponse?: GeneratedStory; // Pour l'IA, c'est l'objet complet (texte, audio, image)
+}
+
 export interface StoryRequest {
   topic: string;
   genre: StoryGenre;
@@ -44,6 +50,8 @@ export interface StoryRequest {
   language: string;
   mediaType: MediaType;
   videoFormat?: VideoFormat;
+  isFollowUp?: boolean; // Indique si c'est la suite d'une conversation
+  conversationHistory?: { role: string; text: string }[]; // Historique complet pour le contexte
 }
 
 export interface GeneratedStory {
@@ -53,9 +61,10 @@ export interface GeneratedStory {
   audioUrl?: string;
   videoUrl?: string;
   imagePrompt?: string;
-  videoError?: string; // Message d'erreur spécifique si la génération vidéo échoue
+  videoError?: string; 
   videoFormat?: VideoFormat;
-  isVideoSimulated?: boolean; // Indique si la vidéo est une simulation (image animée) faute d'API
+  isVideoSimulated?: boolean;
+  nextStepSuggestion?: string;
 }
 
 export interface HistoryItem extends GeneratedStory {

@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   // Charge les variables d'environnement basées sur le mode (ex: .env, .env.production)
-  const env = loadEnv(mode, process.cwd(), '');
+  // Fix TS error: Property 'cwd' does not exist on type 'Process'
+  const env = loadEnv(mode, (process as any).cwd(), '');
   
   // Vercel expose automatiquement les variables commençant par VITE_
   // On vérifie les deux cas possibles

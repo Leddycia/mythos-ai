@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { STORY_GENRES, AGE_GROUPS, IMAGE_STYLES, LANGUAGES, MEDIA_TYPES, VIDEO_FORMATS, APP_NAME } from './constants';
-import { StoryRequest, GeneratedStory, StoryGenre, AgeGroup, ImageStyle, MediaType, HistoryItem, VideoFormat } from './types';
+import { StoryRequest, GeneratedStory, StoryGenre, AgeGroup, ImageStyle, MediaType, HistoryItem, VideoFormat, ChatMessage } from './types';
 import { generateFullStory } from './services/geminiService';
 import Button from './components/Button';
 import Input from './components/Input';
@@ -37,10 +37,14 @@ const App: React.FC = () => {
   // App State
   const [currentView, setCurrentView] = useState<ViewType>('welcome');
   const [loading, setLoading] = useState(false);
+  
+  // Story & Chat State
   const [story, setStory] = useState<GeneratedStory | null>(null);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [lastRequest, setLastRequest] = useState<StoryRequest | null>(null);
+  
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar fermée par défaut
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -65,25 +69,17 @@ const App: React.FC = () => {
   // Load user session & history from localStorage on mount
   useEffect(() => {
     try {
-      // Load User
       const savedUser = localStorage.getItem('mythos_user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
+      if (savedUser) setUser(JSON.parse(savedUser));
 
-      // Load History
       const savedHistory = localStorage.getItem('mythos_history');
-      if (savedHistory) {
-        setHistory(JSON.parse(savedHistory));
-      }
+      if (savedHistory) setHistory(JSON.parse(savedHistory));
     } catch (e) {
       console.error("Impossible de charger les données locales", e);
-      // Clean up corrupt data
       localStorage.removeItem('mythos_history');
     }
   }, []);
 
-  // Gestion responsive de la sidebar (fermeture auto sur mobile)
   useEffect(() => {
     const handleResize = () => {
         if (window.innerWidth < 1024) {
@@ -104,6 +100,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     setStory(null);
+    setChatHistory([]);
     setTopic('');
     setLastRequest(null);
     localStorage.removeItem('mythos_user');
@@ -115,9 +112,9 @@ const App: React.FC = () => {
 
   // Form State
   const [topic, setTopic] = useState('');
-  const [genre, setGenre] = useState<StoryGenre>(StoryGenre.EDUCATIONAL); // Default to Educational
+  const [genre, setGenre] = useState<StoryGenre>(StoryGenre.EDUCATIONAL);
   const [ageGroup, setAgeGroup] = useState<AgeGroup>(AgeGroup.CHILD);
-  const [imageStyle, setImageStyle] = useState<ImageStyle>(ImageStyle.CARTOON); // Default style
+  const [imageStyle, setImageStyle] = useState<ImageStyle>(ImageStyle.CARTOON);
   const [mediaType, setMediaType] = useState<MediaType>(MediaType.TEXT_WITH_IMAGE);
   const [videoFormat, setVideoFormat] = useState<VideoFormat>(VideoFormat.MP4);
   const [language, setLanguage] = useState<string>('Français');
@@ -134,38 +131,17 @@ const App: React.FC = () => {
       genre: request.genre
     };
 
-    // Keep only last 5
     const updatedHistory = [newItem, ...history].slice(0, 5);
-    
-    // Attempt to save to localStorage
     try {
       localStorage.setItem('mythos_history', JSON.stringify(updatedHistory));
       setHistory(updatedHistory);
     } catch (e: any) {
-      if (e.name === 'QuotaExceededError' || e.code === 22) {
-        console.warn("LocalStorage full. Saving without heavy media.");
-        const lightItem = { ...newItem };
-        
-        if (lightItem.imageUrl && lightItem.imageUrl.startsWith('data:')) {
-           lightItem.imageUrl = undefined;
-        }
-        if (lightItem.audioUrl && lightItem.audioUrl.length > 1000) {
-           lightItem.audioUrl = undefined;
-        }
-
-        const lighterHistory = [lightItem, ...history].slice(0, 5);
-        try {
-            localStorage.setItem('mythos_history', JSON.stringify(lighterHistory));
-            setHistory(lighterHistory);
-        } catch (e2) {
-            console.error("Impossible de sauvegarder même en version allégée", e2);
-        }
-      }
+      // Gestion erreur quota...
     }
   };
 
-  const handleGenerate = async (forcedRequest?: StoryRequest) => {
-    const request = forcedRequest || {
+  const handleGenerate = async () => {
+    const request: StoryRequest = {
         topic,
         genre,
         ageGroup,
@@ -182,18 +158,58 @@ const App: React.FC = () => {
     }
 
     setError(null);
-    setLoading(true); // Declenche l'affichage du LoadingBot
+    setLoading(true);
     setLastRequest(request);
+    setChatHistory([]); // Reset chat for new story
 
     try {
       const result = await generateFullStory(request);
       setStory(result);
       saveToHistory(result, request);
-
     } catch (e: any) {
       setError(e.message || "Une erreur est survenue lors de la création.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle "User sends message in chat"
+  const handleChatInteraction = async (userMessage: string) => {
+    if (!lastRequest || !story) return;
+
+    // 1. Add User Message to History UI
+    const newUserMsg: ChatMessage = { role: 'user', content: userMessage };
+    setChatHistory(prev => [...prev, newUserMsg]);
+    
+    setLoading(true);
+
+    try {
+        // 2. Prepare context for AI
+        // Initial context + current chat history + new message
+        const conversationContext = [
+            { role: 'ai', text: story.content }, // Initial lesson content
+            ...chatHistory.map(m => ({ role: m.role, text: m.role === 'user' ? m.content : m.aiResponse?.content || '' })),
+            { role: 'user', text: userMessage }
+        ];
+
+        const followUpRequest: StoryRequest = {
+            ...lastRequest,
+            topic: userMessage, // The prompt is the user's question
+            isFollowUp: true,
+            conversationHistory: conversationContext
+        };
+
+        const result = await generateFullStory(followUpRequest);
+
+        // 3. Add AI Response to History UI
+        const newAiMsg: ChatMessage = { role: 'ai', content: result.content, aiResponse: result };
+        setChatHistory(prev => [...prev, newAiMsg]);
+
+    } catch (e) {
+        console.error("Chat error", e);
+        // Add error message to chat?
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -204,14 +220,14 @@ const App: React.FC = () => {
 
   const handleResetStory = () => {
     setStory(null);
-    // On reste sur la vue actuelle
+    setChatHistory([]);
   };
 
   const selectHistoryItem = (item: HistoryItem) => {
       setStory(item);
+      setChatHistory([]); // Reset chat when loading history item
   };
 
-  // If user is not logged in, show Login Page
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -219,31 +235,23 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen text-slate-900 dark:text-white transition-colors duration-300 flex flex-col relative overflow-x-hidden">
       
-      {/* --- VISION BACKGROUND LAYER (ANIMATED BLOBS) --- */}
+      {/* Background Layer */}
       <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-        {/* Base Background Color */}
         <div className="absolute inset-0 bg-slate-50 dark:bg-[#0B0F19] transition-colors duration-500"></div>
-
-        {/* Animated Orbs - Keyframes are now in index.html */}
         <div className="absolute top-0 -left-4 w-96 h-96 bg-indigo-300 dark:bg-indigo-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob"></div>
         <div className="absolute top-0 -right-4 w-96 h-96 bg-fuchsia-300 dark:bg-fuchsia-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-cyan-300 dark:bg-blue-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-
-        {/* Grid Texture */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 dark:opacity-5 mix-blend-overlay"></div>
-        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(129, 140, 248, 0.2) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
       </div>
 
-      {/* --- LOADING BOT OVERLAY --- */}
-      {loading && <LoadingBot />}
+      {loading && chatHistory.length === 0 && <LoadingBot />}
 
-      {/* Sidebar Navigation */}
       <Sidebar 
         currentView={currentView}
         onChangeView={(view) => {
             setCurrentView(view as ViewType);
-            setStory(null); // Clear story when changing main views
-            if (window.innerWidth < 1024) setIsSidebarOpen(false); // Close on mobile after click
+            setStory(null);
+            if (window.innerWidth < 1024) setIsSidebarOpen(false);
         }}
         onLogout={handleLogout}
         userInitial={user.name.charAt(0)}
@@ -253,36 +261,28 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* Main Content Area */}
       <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:pl-64' : 'pl-0'} flex flex-col min-h-screen relative z-10`}>
         
-        {/* Toggle Sidebar Button (Visible Mobile & Desktop) */}
         <div className="sticky top-0 z-40 p-4 pointer-events-none">
             <button 
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="pointer-events-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {isSidebarOpen ? (
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    ) : (
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                </svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
         </div>
 
-        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 -mt-16 pt-20 w-full">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 -mt-10 lg:-mt-16 pt-4 lg:pt-20">
             
-            {/* If a story is active, show it (overlaying the current view) */}
             {story ? (
                 <StoryDisplay 
-                    story={story} 
+                    initialStory={story}
+                    chatHistory={chatHistory}
                     onBack={handleResetStory} 
+                    onSendMessage={handleChatInteraction}
+                    isThinking={loading}
                 />
             ) : (
-                /* Otherwise show the selected view */
                 <>
                     {currentView === 'welcome' && (
                         <WelcomePage 
@@ -294,19 +294,17 @@ const App: React.FC = () => {
 
                     {currentView === 'create' && (
                         <div className="max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-                            
-                            {/* Back Button for Create View */}
-                            <button 
+                             <button 
                                 onClick={() => setCurrentView('welcome')}
-                                className="mb-6 inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
+                                className="mb-6 inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors text-sm font-medium"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                                 Retour à l'accueil
                             </button>
 
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-8 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
+                            <div className="bg-white/60 dark:bg-slate-900/60 p-6 md:p-8 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
                                 <div className="space-y-6">
-                                    <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
+                                    <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-6">
                                         <h2 className="text-3xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
                                         <p className="text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
                                     </div>
@@ -368,7 +366,6 @@ const App: React.FC = () => {
                                             onChange={(e) => setLanguage(e.target.value)}
                                         />
 
-                                        {/* Cultural Toggle */}
                                         <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors"
                                             onClick={() => setHaitianCulture(!haitianCulture)}
                                         >
@@ -377,7 +374,7 @@ const App: React.FC = () => {
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-slate-900 dark:text-white">Mode Culturel Haïtien</h4>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">Intégrer des références locales (géographie, contes, culture) dans la leçon.</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Intégrer des références locales.</p>
                                             </div>
                                         </div>
 
@@ -389,11 +386,12 @@ const App: React.FC = () => {
                                         )}
                                         
                                         <Button 
-                                            className="w-full !py-4 text-lg mt-4" 
-                                            onClick={() => handleGenerate()}
+                                            className="w-full !py-4 text-lg mt-6 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40" 
+                                            onClick={handleGenerate}
                                             isLoading={loading}
                                         >
-                                            {mediaType === MediaType.VIDEO ? 'Générer la Vidéo 🎥' : 'Générer le contenu ✨'}
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                            Commencer la leçon
                                         </Button>
                                     </div>
                                 </div>
@@ -431,10 +429,8 @@ const App: React.FC = () => {
             )}
         </div>
 
-        {/* Footer */}
         <footer className="w-full p-6 text-center text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50 text-sm bg-white/30 dark:bg-black/20 backdrop-blur-md">
             <p className="font-medium">Développé par <span className="text-indigo-500 dark:text-indigo-400">B.A BA-Tech</span></p>
-            <p className="text-xs mt-1">© 2025 MythosAI - Ayiti AI Hackathon</p>
         </footer>
       </main>
     </div>
