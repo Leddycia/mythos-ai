@@ -273,7 +273,7 @@ const App: React.FC = () => {
             </button>
         </div>
 
-        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 -mt-10 lg:-mt-16 pt-4 lg:pt-20">
+        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 -mt-16 pt-20 w-full">
             
             {/* If a story is active, show it (overlaying the current view) */}
             {story ? (
@@ -298,15 +298,15 @@ const App: React.FC = () => {
                             {/* Back Button for Create View */}
                             <button 
                                 onClick={() => setCurrentView('welcome')}
-                                className="mb-6 inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors text-sm font-medium"
+                                className="mb-6 inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                                 Retour à l'accueil
                             </button>
 
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-6 md:p-10 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
-                                <div className="space-y-8">
-                                    <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-6">
+                            <div className="bg-white/60 dark:bg-slate-900/60 p-8 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
+                                <div className="space-y-6">
+                                    <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
                                         <h2 className="text-3xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
                                         <p className="text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
                                     </div>
@@ -389,16 +389,11 @@ const App: React.FC = () => {
                                         )}
                                         
                                         <Button 
-                                            className="w-full !py-4 text-lg mt-6 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 transform hover:-translate-y-0.5 transition-all" 
+                                            className="w-full !py-4 text-lg mt-4" 
                                             onClick={() => handleGenerate()}
                                             isLoading={loading}
                                         >
-                                            {mediaType === MediaType.VIDEO ? (
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                            ) : (
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                            )}
-                                            {mediaType === MediaType.VIDEO ? 'Générer la Vidéo' : 'Générer le contenu'}
+                                            {mediaType === MediaType.VIDEO ? 'Générer la Vidéo 🎥' : 'Générer le contenu ✨'}
                                         </Button>
                                     </div>
                                 </div>
