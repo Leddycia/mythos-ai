@@ -1,14 +1,14 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
-import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
+import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, GEMINI_API_KEY } from '../constants';
 
-// --- SERVICE AUDIO ELEVENLABS ---
 
 export const generateElevenLabsAudio = async (text: string): Promise<string> => {
+    
     const cleanText = text
-        .replace(/[*#_]/g, '')
-        .replace(/\[.*?\]/g, '')
-        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '')
+        .replace(/[*#_]/g, '') // Enlève *, #, _
+        .replace(/\[.*?\]/g, '') // Enlève les annotations entre crochets
+        .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '') // Enlève les préfixes courants
         .trim();
 
     try {
@@ -16,11 +16,11 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'xi-api-key': "81454163426af0e27eda7e64fb3da07d0e5e91dece59b954e1589c8276df58c5",
+                'xi-api-key': ELEVENLABS_API_KEY,
             },
             body: JSON.stringify({
                 text: cleanText,
-                model_id: "eleven_multilingual_v2",
+                model_id: "eleven_multilingual_v2", 
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.75,
@@ -29,8 +29,8 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         });
 
         if (!response.ok) {
-            console.warn("ElevenLabs limit reached or error, falling back...");
-            return ""; // Retourner vide pour gérer le fallback silencieusement
+            const err = await response.json();
+            throw new Error(err.detail?.message || "Erreur ElevenLabs");
         }
 
         const blob = await response.blob();
@@ -44,22 +44,24 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
 
     } catch (error) {
         console.error("Erreur génération audio ElevenLabs:", error);
-        return "";
+        throw error;
     }
 };
 
-// --- SERVICE IMAGE GRATUIT (Pollinations.ai) ---
+
 
 const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<string> => {
+
     const enhancedPrompt = `${prompt}, ${style} style, high quality, detailed, 8k resolution, cinematic lighting`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
+    // Utilisation du modèle 'flux' pour une meilleure qualité
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&model=flux&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
 
     try {
-        // On vérifie juste que l'URL est accessible
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         
+        // Conversion en Base64 pour compatibilité avec l'affichage
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -71,38 +73,29 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
         });
     } catch (error) {
         console.error("Erreur génération image gratuite:", error);
-        // Fallback image si l'API échoue
-        return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
+        throw new Error("Impossible de générer l'image via l'API gratuite.");
     }
 }
 
 // --- SERVICE VIDEO (SIMULATION) ---
 
+// L'API tierce étant instable/payante, nous simulons la vidéo pour l'instant
+// en renvoyant l'image elle-même. Le front-end appliquera un effet Ken Burns.
 const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<string> => {
     console.log("Simulation vidéo active...");
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Petit délai pour l'effet de chargement
     return base64ImageWithHeader;
 }
-
-// --- MOCK DATA FOR DEMO MODE ---
-const getMockStory = (topic: string): GeneratedStory => ({
-    title: `Démo : ${topic}`,
-    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée.
-    
-    MythosAI fonctionne normalement en se connectant à l'intelligence artificielle de Google. En attendant que vous configuriez votre clé API, voici un exemple de ce à quoi ressemble une leçon.
-    
-    Le sujet demandé était : **${topic}**.
-    
-    Dans un environnement réel, l'IA aurait expliqué ce concept en détail, adapté à votre niveau, avec des exemples pertinents et une narration fluide.`,
-    imagePrompt: "Futuristic artificial intelligence glowing brain interface, digital art",
-    imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=1000",
-    isVideoSimulated: true
-});
 
 // --- FONCTIONS EXPORTÉES ---
 
 export const regenerateAudio = async (text: string): Promise<string | undefined> => {
-    return await generateElevenLabsAudio(text);
+    try {
+        return await generateElevenLabsAudio(text);
+    } catch (e) {
+        console.error("Echec régénération audio:", e);
+        return undefined;
+    }
 };
 
 export const regenerateStoryImage = async (
@@ -112,13 +105,15 @@ export const regenerateStoryImage = async (
   videoFormat?: VideoFormat
 ): Promise<{ imageUrl: string; videoUrl?: string; videoError?: string; videoFormat?: VideoFormat; isVideoSimulated?: boolean }> => {
   
+  // 1. Génération Image (Via API Gratuite)
   let imageUrl = "";
   try {
       imageUrl = await generateFreeImage(currentPrompt, style);
   } catch (e) {
-      imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
+      throw new Error("La régénération de l'image a échoué.");
   }
 
+  // 2. Si c'était une vidéo, on simule la vidéo
   let videoUrl: string | undefined;
   let isVideoSimulated = false;
 
@@ -131,19 +126,9 @@ export const regenerateStoryImage = async (
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {
-  // 1. RECUPERATION DE LA CLÉ API
-  // On vérifie process.env.API_KEY injecté par Vite define, ou import.meta.env
-  const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
-
-  // 2. MODE DÉMO / FALLBACK
-  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
-      console.warn("⚠️ CLÉ MANQUANTE : Passage en mode DÉMO.");
-      // Simulation d'attente pour le réalisme
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return getMockStory(request.topic);
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+    
+    // Initialisation correcte de Gemini
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
   try {
     // === 1. TEXT GENERATION (Foundation) ===
@@ -159,18 +144,21 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let taskDescription = "";
     let constraints = "";
 
+    // CONTRAINTES STRICTES DE NARRATION
     const narrativeConstraints = `
     RÈGLES DE NARRATION STRICTES :
     1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé", "Résumé", "Conclusion".
     2. Le texte doit couler naturellement, comme si une personne parlait.
-    3. PAS de listes à puces ou de numérotation.
+    3. PAS de listes à puces ou de numérotation, sauf si absolument nécessaire pour une liste d'ingrédients ou d'étapes courtes.
+    4. Expliquez les concepts directement dans le flux du récit.
     `;
 
+    // CONFIGURATION DES CONTRAINTES DE LONGUEUR
     if (isVideoMode) {
         constraints = `
         CONTRAINTE VIDEO (15s) :
         - Texte EXTRÊMEMENT COURT (Max 40 mots).
-        - Style script dynamique.
+        - Style script dynamique pour vidéo courte.
         ${narrativeConstraints}
         `;
     } else {
@@ -181,8 +169,8 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     }
 
     if (isEducational) {
-        systemInstruction = `Vous êtes un guide pédagogue expert.`;
-        taskDescription = `Expliquez : "${request.topic}".`;
+        systemInstruction = `Vous êtes un guide pédagogue expert. Vous expliquez les choses comme si vous parliez à un élève en face de vous.`;
+        taskDescription = `Expliquez le sujet : "${request.topic}".`;
     } else {
         systemInstruction = "Vous êtes un conteur captivant.";
         taskDescription = `Racontez une histoire sur : "${request.topic}".`;
@@ -196,53 +184,62 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
       ${constraints}
 
       PARAMÈTRES :
-      - Public : ${request.ageGroup}
+      - Public : ${request.ageGroup} (Adaptez le vocabulaire et le ton)
       - Langue : ${request.language}
       ${culturePrompt}
 
       IMAGE PROMPT (Important) :
-      Générez également une description visuelle EN ANGLAIS.
+      Générez également une description visuelle EN ANGLAIS pour le générateur d'images.
       
       Retournez la réponse au format JSON :
       {
-        "title": "Titre",
-        "content": "Contenu",
+        "title": "Un titre court et accrocheur",
+        "content": "Le texte narratif fluide",
         "imagePrompt": "Description visuelle (Anglais)"
       }
     `;
 
-    const textResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            content: { type: Type.STRING },
-            imagePrompt: { type: Type.STRING },
-          },
-          required: ["title", "content", "imagePrompt"],
+    // Configuration du Modèle avec le Schema JSON
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash", // Utilisation de la version stable
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: SchemaType.OBJECT,
+                properties: {
+                    title: { type: SchemaType.STRING },
+                    content: { type: SchemaType.STRING },
+                    imagePrompt: { type: SchemaType.STRING },
+                },
+                required: ["title", "content", "imagePrompt"],
+            }
         }
-      }
     });
 
-    const textData = JSON.parse(textResponse.text || '{}');
-    const title = textData.title || request.topic;
-    const content = textData.content || "Contenu non disponible.";
-    const imagePromptText = textData.imagePrompt || `Illustration of ${request.topic}`;
+    // Génération du contenu
+    const result = await model.generateContent(prompt);
+    const textResponse = result.response.text();
+    
+    // Parsing du JSON
+    const textData = JSON.parse(textResponse || '{}');
+    const title = textData.title || "Sans titre";
+    const content = textData.content || "Aucun contenu généré.";
+    const imagePromptText = textData.imagePrompt || `Educational illustration about ${request.topic}`;
 
     // === 2. IMAGE GENERATION (API Gratuite - Pollinations) ===
+    
     let imageUrl: string | undefined;
+    
     if (request.mediaType !== MediaType.TEXT_ONLY) {
         try {
             const cultureStyle = request.includeHaitianCulture ? "Caribbean aesthetic, vibrant colors, " : "";
             const finalImagePrompt = `${imagePromptText}, ${cultureStyle}`;
+            
+            // Appel à l'API Gratuite
             imageUrl = await generateFreeImage(finalImagePrompt, request.imageStyle);
+            
         } catch (imgError) {
-            console.warn("Image generation failed, using placeholder");
-            imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
+            console.warn("Image generation failed:", imgError);
         }
     }
 
@@ -250,9 +247,12 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let videoUrl: string | undefined;
     let isVideoSimulated = false;
     
-    if (request.mediaType === MediaType.VIDEO && imageUrl) {
-         videoUrl = await simulateVideoFromImage(imageUrl);
-         isVideoSimulated = true;
+    if (request.mediaType === MediaType.VIDEO) {
+        if (imageUrl) {
+             // On utilise l'image comme source de vidéo simulée
+             videoUrl = await simulateVideoFromImage(imageUrl);
+             isVideoSimulated = true;
+        }
     }
 
     // === 4. AUDIO GENERATION (ElevenLabs) ===
@@ -260,7 +260,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     try {
         audioUrl = await generateElevenLabsAudio(content);
     } catch (audioError) {
-        console.warn("Audio generation failed");
+        console.warn("Audio generation failed:", audioError);
     }
 
     return {
@@ -276,10 +276,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
 
   } catch (error: any) {
     console.error("Content generation failed:", error);
-    // En cas d'erreur API réelle, on fallback sur le mock pour ne pas bloquer l'utilisateur
-    if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('401')) {
-        return getMockStory(request.topic);
-    }
-    throw new Error("Une erreur est survenue. Le mode démo a été activé.");
+    throw new Error(error.message || "Échec de la génération.");
   }
 };
