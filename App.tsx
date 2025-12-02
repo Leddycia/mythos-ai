@@ -13,6 +13,7 @@ import WelcomePage from './components/WelcomePage';
 import Sidebar from './components/Sidebar';
 import ImageGallery from './components/ImageGallery';
 import SettingsPage from './components/SettingsPage';
+import AboutPage from './components/AboutPage';
 import LoadingBot from './components/LoadingBot';
 
 // Extend window interface for Google AI Studio specific features
@@ -28,7 +29,7 @@ interface UserSession {
   name: string;
 }
 
-type ViewType = 'welcome' | 'create' | 'history' | 'images' | 'settings';
+type ViewType = 'welcome' | 'create' | 'history' | 'images' | 'settings' | 'about';
 
 const App: React.FC = () => {
   // Auth State
@@ -436,6 +437,12 @@ const App: React.FC = () => {
                             theme={theme}
                             toggleTheme={toggleTheme}
                             user={user}
+                         />
+                    )}
+                    
+                    {currentView === 'about' && (
+                         <AboutPage
+                            onBack={() => setCurrentView('welcome')}
                          />
                     )}
                 </>
