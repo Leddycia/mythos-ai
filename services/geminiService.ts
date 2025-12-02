@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
+import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat, QuizQuestion } from '../types';
 import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
 
 // --- SERVICE AUDIO ELEVENLABS ---
@@ -148,6 +148,79 @@ export const regenerateStoryImage = async (
   }
 
   return { imageUrl, videoUrl, videoFormat, isVideoSimulated };
+};
+
+export const generateQuizFromContent = async (content: string, ageGroup: string): Promise<QuizQuestion[]> => {
+  const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
+  
+  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+     return [
+       { question: "Question de démo 1 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép A", explanation: "Explication démo" },
+       { question: "Question de démo 2 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép B", explanation: "Explication démo" },
+       { question: "Question de démo 3 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép A", explanation: "Explication démo" },
+       { question: "Question de démo 4 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép B", explanation: "Explication démo" },
+       { question: "Question de démo 5 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép C", explanation: "Explication démo" }
+     ];
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `
+  Génère un Quiz interactif (QCM) de 5 questions basé EXCLUSIVEMENT sur le contenu suivant.
+  
+  CONTENU:
+  ${content.substring(0, 4000)}
+
+  CIBLE: ${ageGroup}
+
+  RÈGLES:
+  1. Retourne JSON uniquement.
+  2. Chaque question doit avoir 3 choix de réponse.
+  3. Fournis une explication courte pour la bonne réponse.
+  4. Varie les questions pour couvrir tout le sujet.
+  5. Génère exactement 5 questions.
+
+  SCHEMA:
+  {
+    "questions": [
+       { "question": "...", "options": ["A", "B", "C"], "correctAnswer": "A", "explanation": "..." }
+    ]
+  }
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    questions: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                question: { type: Type.STRING },
+                                options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                                correctAnswer: { type: Type.STRING },
+                                explanation: { type: Type.STRING }
+                            },
+                            required: ["question", "options", "correctAnswer", "explanation"]
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const json = JSON.parse(response.text || '{}');
+    return json.questions || [];
+  } catch (error) {
+    console.error("Erreur génération quiz:", error);
+    return [];
+  }
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {

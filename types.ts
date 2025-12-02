@@ -54,6 +54,13 @@ export interface StoryRequest {
   conversationHistory?: { role: string; text: string }[]; // Historique complet pour le contexte
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
 export interface GeneratedStory {
   title: string;
   content: string;
@@ -65,6 +72,7 @@ export interface GeneratedStory {
   videoFormat?: VideoFormat;
   isVideoSimulated?: boolean;
   nextStepSuggestion?: string;
+  quiz?: QuizQuestion[];
 }
 
 export interface HistoryItem extends GeneratedStory {
