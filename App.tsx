@@ -234,240 +234,187 @@ const App: React.FC = () => {
       
       {/* Background Layer */}
       <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-slate-50 dark:bg-[#0B0F19] transition-colors duration-500"></div>
-        <div className="absolute top-0 -left-4 w-96 h-96 bg-indigo-300 dark:bg-indigo-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob"></div>
-        <div className="absolute top-0 -right-4 w-96 h-96 bg-fuchsia-300 dark:bg-fuchsia-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-cyan-300 dark:bg-blue-600/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 dark:opacity-5 mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-slate-50 dark:bg-[#0B0F19] transition-colors duration-500"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[120px] animate-[blob_7s_infinite]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/10 blur-[120px] animate-[blob_7s_infinite] animation-delay-2000"></div>
+           <div className="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-cyan-500/10 blur-[100px] animate-[blob_7s_infinite] animation-delay-4000"></div>
+          {/* Mesh Gradient Overlay */}
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
       </div>
 
-      {loading && chatHistory.length === 0 && <LoadingBot />}
-
       <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
         currentView={currentView}
         onChangeView={(view) => {
-            setCurrentView(view as ViewType);
+            setCurrentView(view);
             setStory(null);
-            setIsSidebarOpen(false); // Close sidebar on selection on mobile
+            setIsSidebarOpen(false);
         }}
         onLogout={handleLogout}
         userInitial={user.name.charAt(0)}
         theme={theme}
         toggleTheme={toggleTheme}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:pl-64' : ''} flex flex-col min-h-[100dvh] relative z-10`}>
-        
-        {/* Mobile & Desktop Header Trigger */}
-        <div className="sticky top-0 z-40 p-4 flex justify-between items-center pointer-events-none">
-            <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="pointer-events-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            >
-                {isSidebarOpen ? (
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                ) : (
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                )}
-            </button>
-            {/* Logo removed from top right as requested */}
-            <div></div>
-        </div>
-
-        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-4">
+      {/* Main Content */}
+      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:pl-64' : ''} lg:pl-0`}>
+          {/* Header Mobile / Toggle */}
+         {!isSidebarOpen && (
+            <div className="fixed top-4 left-4 z-40">
+                <button 
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="p-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg hover:bg-white dark:hover:bg-slate-800 transition-all group"
+                >
+                    <svg className="w-6 h-6 text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+            </div>
+         )}
+         
+         <div className={`min-h-screen transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : ''}`}>
             
-            {story ? (
-                <StoryDisplay 
-                    initialStory={story}
-                    chatHistory={chatHistory}
-                    onBack={handleResetStory} 
-                    onEndSession={handleResetStory}
-                    onSendMessage={handleChatInteraction}
-                    isThinking={loading}
-                />
-            ) : (
-                <>
-                    {currentView === 'welcome' && (
-                        <WelcomePage 
-                            userName={user.name.split(' ')[0]} 
-                            onStartCreate={() => setCurrentView('create')}
-                            onViewHistory={() => setCurrentView('history')}
-                        />
-                    )}
+            {loading && <LoadingBot />}
 
-                    {currentView === 'create' && (
-                        <div className="max-w-5xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-                             <button 
-                                onClick={() => setCurrentView('welcome')}
-                                className="mb-6 inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors text-sm font-medium"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                                Retour à l'accueil
-                            </button>
+            <div className="p-4 md:p-8 pt-20 lg:pt-8 max-w-7xl mx-auto">
+                
+                {story ? (
+                    <StoryDisplay 
+                        initialStory={story} 
+                        onBack={() => setStory(null)}
+                        onSendMessage={handleChatInteraction}
+                        onEndSession={() => {
+                            setStory(null);
+                            setChatHistory([]);
+                        }}
+                        chatHistory={chatHistory}
+                        isThinking={loading}
+                    />
+                ) : (
+                    <>
+                        {currentView === 'welcome' && (
+                            <WelcomePage 
+                                userName={user.name} 
+                                onStartCreate={() => setCurrentView('create')}
+                                onViewHistory={() => setCurrentView('history')}
+                            />
+                        )}
 
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-5 md:p-10 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
-                                <div className="space-y-6 md:space-y-8">
-                                    <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-6">
-                                        <h2 className="text-3xl md:text-4xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
-                                        <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
-                                    </div>
-
-                                    <div className="space-y-6 md:space-y-8">
-                                        <Input 
-                                            label="Sujet, Concept ou Titre" 
-                                            placeholder="ex: La Photosynthèse, La Révolution..."
-                                            value={topic}
-                                            onChange={(e) => setTopic(e.target.value)}
-                                            className="!text-lg md:!text-xl !py-3 md:!py-4"
-                                        />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                                            <Select 
-                                                label="Type de contenu" 
-                                                options={STORY_GENRES}
-                                                value={genre}
-                                                onChange={(e) => setGenre(e.target.value as StoryGenre)}
-                                                className="!text-lg"
-                                            />
-                                            <Select 
-                                                label="Niveau (Public Cible)" 
-                                                options={AGE_GROUPS}
-                                                value={ageGroup}
-                                                onChange={(e) => setAgeGroup(e.target.value as AgeGroup)}
-                                                className="!text-lg"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-                                            <Select 
-                                                label="Format du Support"
-                                                options={MEDIA_TYPES}
-                                                value={mediaType}
-                                                onChange={(e) => setMediaType(e.target.value as MediaType)}
-                                                className="!text-lg"
-                                            />
-                                            {mediaType === MediaType.VIDEO ? (
-                                                <Select 
-                                                    label="Format Vidéo"
-                                                    options={VIDEO_FORMATS}
-                                                    value={videoFormat}
-                                                    onChange={(e) => setVideoFormat(e.target.value as VideoFormat)}
-                                                    className="!text-lg"
-                                                />
-                                            ) : (
-                                                <Select 
-                                                    label="Style Visuel" 
-                                                    options={IMAGE_STYLES}
-                                                    value={imageStyle}
-                                                    onChange={(e) => setImageStyle(e.target.value as ImageStyle)}
-                                                    disabled={mediaType === MediaType.TEXT_ONLY}
-                                                    className={`!text-lg ${mediaType === MediaType.TEXT_ONLY ? 'opacity-50' : ''}`}
-                                                />
-                                            )}
-                                        </div>
-                                        
-                                        <Select
-                                            label="Langue de sortie"
-                                            options={LANGUAGES}
-                                            value={language}
-                                            onChange={(e) => setLanguage(e.target.value)}
-                                            className="!text-lg"
-                                        />
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Haitian Culture Toggle */}
-                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-5 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors touch-manipulation"
-                                                onClick={() => setHaitianCulture(!haitianCulture)}
-                                            >
-                                                <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${haitianCulture ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${haitianCulture ? 'left-7' : 'left-1'}`} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-slate-900 dark:text-white text-base">Mode Culturel Haïtien</h4>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Références locales</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Fast Mode Toggle */}
-                                            <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl p-5 flex items-center gap-4 cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors touch-manipulation"
-                                                onClick={() => setIsFastMode(!isFastMode)}
-                                            >
-                                                <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${isFastMode ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${isFastMode ? 'left-7' : 'left-1'}`} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                                                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                                        Mode Rapide
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Réponses instantanées (Flash Lite)</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {error && (
-                                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2 animate-pulse">
-                                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                <span>{error}</span>
-                                            </div>
-                                        )}
-                                        
-                                        <Button 
-                                            className="w-full !py-4 md:!py-5 text-xl mt-8 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 active:scale-[0.98]" 
-                                            onClick={handleGenerate}
-                                            isLoading={loading}
-                                        >
-                                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                            Commencer la leçon
-                                        </Button>
-                                    </div>
+                        {currentView === 'create' && (
+                             <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
+                                <div className="flex items-center gap-3 mb-8">
+                                     <button onClick={() => setCurrentView('welcome')} className="lg:hidden text-slate-400 hover:text-slate-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg></button>
+                                     <h2 className="text-3xl font-bold font-serif text-slate-900 dark:text-white">Créer une nouvelle leçon</h2>
                                 </div>
-                            </div>
-                        </div>
-                    )}
 
-                    {currentView === 'history' && (
-                        <HistoryList 
-                            history={history} 
-                            onSelect={selectHistoryItem} 
-                            onClear={handleClearHistory}
-                            onBack={() => setCurrentView('welcome')}
-                        />
-                    )}
+                                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-8">
+                                    <Input 
+                                        label="Sujet ou Concept à explorer" 
+                                        placeholder="Ex: La Révolution Haïtienne, Le Théorème de Pythagore..." 
+                                        value={topic}
+                                        onChange={(e) => setTopic(e.target.value)}
+                                        className="!text-xl"
+                                        autoFocus
+                                    />
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Select label="Genre / Type" options={STORY_GENRES} value={genre} onChange={(e) => setGenre(e.target.value as StoryGenre)} />
+                                        <Select label="Public Cible" options={AGE_GROUPS} value={ageGroup} onChange={(e) => setAgeGroup(e.target.value as AgeGroup)} />
+                                    </div>
 
-                    {currentView === 'images' && (
-                        <ImageGallery
-                            history={history}
-                            onSelect={selectHistoryItem}
-                            onBack={() => setCurrentView('welcome')}
-                        />
-                    )}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Select label="Format du contenu" options={MEDIA_TYPES} value={mediaType} onChange={(e) => setMediaType(e.target.value as MediaType)} />
+                                        {mediaType === MediaType.VIDEO && (
+                                            <Select label="Format Vidéo" options={VIDEO_FORMATS} value={videoFormat} onChange={(e) => setVideoFormat(e.target.value as VideoFormat)} />
+                                        )}
+                                        {mediaType !== MediaType.TEXT_ONLY && mediaType !== MediaType.VIDEO && (
+                                            <Select label="Style Visuel" options={IMAGE_STYLES} value={imageStyle} onChange={(e) => setImageStyle(e.target.value as ImageStyle)} />
+                                        )}
+                                    </div>
 
-                    {currentView === 'settings' && (
-                         <SettingsPage
-                            onBack={() => setCurrentView('welcome')}
-                            onClearHistory={handleClearHistory}
-                            theme={theme}
-                            toggleTheme={toggleTheme}
-                            user={user}
-                         />
-                    )}
-                    
-                    {currentView === 'about' && (
-                         <AboutPage
-                            onBack={() => setCurrentView('welcome')}
-                         />
-                    )}
-                </>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <Select label="Langue" options={LANGUAGES} value={language} onChange={(e) => setLanguage(e.target.value)} />
+                                         
+                                         <div className="flex flex-col gap-2 justify-end pb-1">
+                                            <label className="flex items-center gap-3 cursor-pointer group">
+                                                <div className="relative">
+                                                    <input type="checkbox" className="sr-only peer" checked={haitianCulture} onChange={(e) => setHaitianCulture(e.target.checked)} />
+                                                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-gradient-to-r peer-checked:from-indigo-500 peer-checked:to-fuchsia-500"></div>
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                    Mode Culture Haïtienne 🇭🇹
+                                                </span>
+                                            </label>
+                                            
+                                            <label className="flex items-center gap-3 cursor-pointer group mt-2">
+                                                <div className="relative">
+                                                    <input type="checkbox" className="sr-only peer" checked={isFastMode} onChange={(e) => setIsFastMode(e.target.checked)} />
+                                                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-emerald-500 transition-colors flex items-center gap-2">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                    Mode Réponse Rapide
+                                                </span>
+                                            </label>
+                                         </div>
+                                    </div>
+
+                                    {error && (
+                                        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    <Button onClick={handleGenerate} isLoading={loading} className="w-full !py-4 text-lg shadow-indigo-500/20" variant="primary">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                        Générer la leçon
+                                    </Button>
+                                </div>
+                             </div>
+                        )}
+
+                        {currentView === 'history' && (
+                            <HistoryList 
+                                history={history} 
+                                onSelect={selectHistoryItem} 
+                                onClear={handleClearHistory}
+                                onBack={() => setCurrentView('welcome')}
+                            />
+                        )}
+
+                        {currentView === 'images' && (
+                            <ImageGallery 
+                                history={history} 
+                                onSelect={selectHistoryItem} 
+                                onBack={() => setCurrentView('welcome')}
+                            />
+                        )}
+
+                        {currentView === 'settings' && (
+                            <SettingsPage 
+                                onBack={() => setCurrentView('welcome')} 
+                                onClearHistory={handleClearHistory}
+                                theme={theme}
+                                toggleTheme={toggleTheme}
+                                user={user}
+                            />
+                        )}
+
+                        {currentView === 'about' && (
+                            <AboutPage onBack={() => setCurrentView('welcome')} />
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Footer */}
+            {!story && currentView !== 'welcome' && (
+                <div className="w-full py-6 text-center text-slate-400 dark:text-slate-600 text-sm mt-auto">
+                    Développé par <span className="font-semibold text-indigo-500">B.A BA-Tech</span> • Ayiti AI Hackathon 2025
+                </div>
             )}
-        </div>
+         </div>
 
-        <footer className="w-full p-6 text-center text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50 text-xs md:text-sm bg-white/30 dark:bg-black/20 backdrop-blur-md">
-            <p className="font-medium">Développé par <span className="text-indigo-500 dark:text-indigo-400">B.A BA-Tech</span></p>
-        </footer>
       </main>
     </div>
   );
