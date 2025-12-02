@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat, QuizQuestion } from '../types';
-import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
+import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, APP_NAME } from '../constants';
 
 // --- SERVICE AUDIO ELEVENLABS ---
 
@@ -86,15 +86,55 @@ const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<st
     return base64ImageWithHeader;
 }
 
-// --- MOCK DATA FOR DEMO MODE ---
-const getMockStory = (topic: string): GeneratedStory => ({
-    title: `Démo : ${topic}`,
-    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée.`,
-    imagePrompt: "Futuristic artificial intelligence glowing brain interface, digital art",
-    imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=1000",
+// --- HELPER CONFIGURATION MANQUANTE ---
+const getConfigurationHelpStory = (topic: string): GeneratedStory => ({
+    title: "⚠️ Clé API Manquante",
+    content: `
+### Configuration Requise pour ${APP_NAME}
+
+Vous voyez ce message car **aucune clé API Google Gemini valide n'a été détectée**. L'application ne peut pas générer le contenu sur "${topic}".
+
+#### Comment configurer la clé ?
+
+1.  **Obtenir une clé :** Rendez-vous sur [Google AI Studio](https://aistudio.google.com/app/apikey) et créez une clé API gratuite.
+2.  **En Local :** Créez un fichier \`.env\` à la racine du projet et ajoutez :
+    \`\`\`bash
+    VITE_API_KEY=votre_clé_commençant_par_AIza...
+    \`\`\`
+3.  **Sur Vercel / Netlify :** Allez dans les paramètres de votre projet, section **Environment Variables**, et ajoutez une variable nommée \`API_KEY\` avec votre clé.
+
+Une fois la clé ajoutée, rechargez la page pour profiter de l'expérience complète !
+    `,
+    imagePrompt: "Error 404 robot repairing settings gear, digital art",
+    imageUrl: "https://images.unsplash.com/photo-1594322436404-5a0526db4d13?auto=format&fit=crop&q=80&w=1000",
     isVideoSimulated: true,
-    nextStepSuggestion: "Voulez-vous que je vous explique comment fonctionne une API plus en détail ?"
+    nextStepSuggestion: "J'ai configuré ma clé, recharger la page ?"
 });
+
+// --- SERVICE OPENAI (FALLBACK) ---
+const generateOpenAIContent = async (apiKey: string, prompt: string, model: string = "gpt-4o"): Promise<string> => {
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [{ role: "user", content: prompt }],
+                response_format: { type: "json_object" }
+            })
+        });
+
+        if (!response.ok) throw new Error(`OpenAI Error: ${response.status}`);
+        const data = await response.json();
+        return data.choices[0].message.content;
+    } catch (e) {
+        console.error("OpenAI Fallback failed:", e);
+        throw e;
+    }
+};
 
 // --- FONCTIONS EXPORTÉES ---
 
@@ -129,22 +169,16 @@ export const regenerateStoryImage = async (
 };
 
 export const generateQuizFromContent = async (content: string, ageGroup: string): Promise<QuizQuestion[]> => {
-  const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
+  // Récupération des clés
+  const geminiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
+  const openAIKey = (import.meta as any).env?.VITE_OPENAI_API_KEY || (import.meta as any).env?.OPENAI_API_KEY;
   
-  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
-     return [
-       { question: "Question de démo 1 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép A", explanation: "Explication démo" },
-       { question: "Question de démo 2 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép B", explanation: "Explication démo" },
-       { question: "Question de démo 3 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép A", explanation: "Explication démo" },
-       { question: "Question de démo 4 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép B", explanation: "Explication démo" },
-       { question: "Question de démo 5 ?", options: ["Rép A", "Rép B", "Rép C"], correctAnswer: "Rép C", explanation: "Explication démo" }
-     ];
+  if ((!geminiKey || geminiKey === '') && (!openAIKey || openAIKey === '')) {
+     return [];
   }
 
-  const ai = new GoogleGenAI({ apiKey });
-
   const prompt = `
-  Génère un Quiz interactif (QCM) de 5 questions basé EXCLUSIVEMENT sur le contenu ci-dessous (qui peut être une leçon simple ou un historique de conversation complet).
+  Génère un Quiz interactif (QCM) de 5 questions basé EXCLUSIVEMENT sur le contenu ci-dessous.
   
   CONTENU À ÉVALUER:
   ${content.substring(0, 15000)}
@@ -155,8 +189,7 @@ export const generateQuizFromContent = async (content: string, ageGroup: string)
   1. Retourne JSON uniquement.
   2. Chaque question doit avoir 3 choix de réponse.
   3. Fournis une explication courte pour la bonne réponse.
-  4. Varie les questions pour couvrir l'ensemble des points abordés dans la discussion.
-  5. Génère exactement 5 questions.
+  4. Varie les questions.
 
   SCHEMA:
   {
@@ -166,61 +199,59 @@ export const generateQuizFromContent = async (content: string, ageGroup: string)
   }
   `;
 
+  let responseText = '';
+
+  // 1. Essai Gemini
+  if (geminiKey) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: geminiKey });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+        });
+        responseText = response.text || '';
+      } catch (e) {
+        console.warn("Gemini Quiz failed, trying OpenAI...", e);
+      }
+  }
+
+  // 2. Fallback OpenAI
+  if (!responseText && openAIKey) {
+      try {
+          responseText = await generateOpenAIContent(openAIKey, prompt);
+      } catch (e) {
+          console.error("OpenAI Quiz failed too", e);
+      }
+  }
+
+  if (!responseText) return [];
+
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    questions: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                question: { type: Type.STRING },
-                                options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                                correctAnswer: { type: Type.STRING },
-                                explanation: { type: Type.STRING }
-                            },
-                            required: ["question", "options", "correctAnswer", "explanation"]
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    let responseText = response.text || '';
-    responseText = responseText.replace(/```json|```/g, '').trim();
-
-    if (!responseText) return [];
-
-    const json = JSON.parse(responseText);
+    const cleanJson = responseText.replace(/```json|```/g, '').trim();
+    const json = JSON.parse(cleanJson);
     
     if (json && Array.isArray(json.questions)) {
         return json.questions;
     }
     return [];
-
   } catch (error) {
-    console.error("Erreur génération quiz (Parsing ou API):", error);
+    console.error("Erreur parsing quiz JSON:", error);
     return [];
   }
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {
   const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
+  const openAIKey = (import.meta as any).env?.VITE_OPENAI_API_KEY || (import.meta as any).env?.OPENAI_API_KEY;
 
-  if (!apiKey || apiKey === 'undefined' || apiKey === '') {
-      console.warn("⚠️ CLÉ MANQUANTE : Passage en mode DÉMO.");
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return getMockStory(request.topic);
+  // VERIFICATION CRITIQUE DE LA CLÉ
+  if ((!apiKey || apiKey === 'undefined' || apiKey === '') && (!openAIKey || openAIKey === '')) {
+      console.error("🔴 AUCUNE CLÉ API DÉTECTÉE (Gemini ou OpenAI).");
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // RETOURNE LA CARTE D'AIDE À LA CONFIGURATION AU LIEU D'UNE HISTOIRE
+      return getConfigurationHelpStory(request.topic);
   }
-
-  const ai = new GoogleGenAI({ apiKey });
 
   try {
     const culturePrompt = request.includeHaitianCulture
@@ -251,10 +282,10 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
 
     const narrativeConstraints = `
     RÈGLES DE NARRATION STRICTES :
-    1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé".
-    2. Le texte doit couler naturellement, comme si une personne parlait.
-    3. PAS de listes à puces ou de numérotation excessive.
-    4. INTERDICTION d'utiliser des émojis dans le texte ou les suggestions.
+    1. NE PAS utiliser de titres explicites comme "Introduction", "Développement".
+    2. Le texte doit couler naturellement.
+    3. PAS de listes à puces excessives.
+    4. INTERDICTION d'utiliser des émojis.
     `;
 
     if (isVideoMode) {
@@ -274,26 +305,23 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     if (isEducational) {
         if (isConversation) {
              systemInstruction = `
-             Vous êtes "Professeur Mythos", un tuteur interactif et dynamique. 
-             Nous sommes dans un DIALOGUE continu avec l'élève.
-             Votre but : Répondre aux questions, corriger si nécessaire, encourager, et maintenir l'engagement.
-             
+             Vous êtes "Professeur Mythos", un tuteur interactif.
              Structure attendue :
-             1. Réponse directe : Répondez à la question ou à la remarque de l'utilisateur.
-             2. Interaction : Terminez TOUJOURS par une ouverture (une nouvelle question, une devinette, ou une demande d'opinion) pour forcer l'utilisateur à répondre.
-             3. Ton : Encourageant, curieux et adapté à l'âge (${request.ageGroup}).
+             1. Réponse directe à l'utilisateur.
+             2. Interaction : Terminez par une ouverture (question, devinette).
+             3. Ton : Adapté à l'âge (${request.ageGroup}).
              `;
-             taskDescription = `L'utilisateur dit : "${request.topic}". Répondez-lui en tenant compte du contexte.`;
+             taskDescription = `L'utilisateur dit : "${request.topic}". Répondez.`;
         } else {
-            systemInstruction = `Vous êtes un guide pédagogue expert et bienveillant. À la fin de votre explication, vous devez TOUJOURS proposer une suite logique sous forme de question directe à l'élève.`;
+            systemInstruction = `Vous êtes un guide pédagogue expert. À la fin, proposez TOUJOURS une suite logique.`;
             taskDescription = `Expliquez : "${request.topic}".`;
         }
     } else {
         if (isConversation) {
-             systemInstruction = "Vous êtes le Maître du Donjon narratif. Le lecteur réagit à l'histoire. Continuez l'aventure en prenant en compte sa réponse.";
+             systemInstruction = "Vous êtes le Maître du Donjon narratif. Continuez l'aventure.";
              taskDescription = `L'utilisateur dit : "${request.topic}". Continuez l'histoire.`;
         } else {
-            systemInstruction = "Vous êtes un conteur captivant. À la fin de l'histoire, proposez au lecteur d'imaginer une suite ou d'explorer un aspect de l'univers.";
+            systemInstruction = "Vous êtes un conteur captivant. Proposez une suite à la fin.";
             taskDescription = `Racontez une histoire sur : "${request.topic}".`;
         }
     }
@@ -313,36 +341,49 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
       ${culturePrompt}
 
       IMAGE PROMPT (Important) :
-      Générez également une description visuelle EN ANGLAIS pour illustrer cette partie spécifique de la conversation.
+      Générez également une description visuelle EN ANGLAIS.
       
       Retournez la réponse au format JSON :
       {
-        "title": "Titre (ou sujet de la réponse)",
-        "content": "Contenu (conversationnel)",
+        "title": "Titre",
+        "content": "Contenu",
         "imagePrompt": "Description visuelle (Anglais)",
-        "nextStepSuggestion": "Question pour continuer (ex: 'Prêt pour la réponse du quiz ?' ou 'Veux-tu savoir pourquoi...?')"
+        "nextStepSuggestion": "Question pour continuer"
       }
     `;
 
-    const textResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            content: { type: Type.STRING },
-            imagePrompt: { type: Type.STRING },
-            nextStepSuggestion: { type: Type.STRING },
-          },
-          required: ["title", "content", "imagePrompt", "nextStepSuggestion"],
-        }
-      }
-    });
+    let textData: any = null;
 
-    const textData = JSON.parse(textResponse.text || '{}');
+    // 1. ESSAI GEMINI
+    if (apiKey) {
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            const response = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: prompt,
+              config: { responseMimeType: "application/json" }
+            });
+            textData = JSON.parse(response.text || '{}');
+        } catch (geminiError: any) {
+             console.warn("Gemini generation failed, attempting fallback...", geminiError);
+             if (!openAIKey) throw geminiError; // Si pas de fallback, on lance l'erreur
+        }
+    }
+
+    // 2. FALLBACK OPENAI
+    if (!textData && openAIKey) {
+        try {
+            console.log("Using OpenAI Fallback...");
+            const jsonStr = await generateOpenAIContent(openAIKey, prompt);
+            textData = JSON.parse(jsonStr);
+        } catch (openaiError) {
+            console.error("All AI services failed.");
+            throw new Error("Tous les services IA sont indisponibles.");
+        }
+    }
+
+    if (!textData) throw new Error("Génération échouée.");
+
     const title = textData.title || request.topic;
     const content = textData.content || "Contenu non disponible.";
     const imagePromptText = textData.imagePrompt || `Illustration of ${request.topic}`;
@@ -355,7 +396,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
             const finalImagePrompt = `${imagePromptText}, ${cultureStyle}`;
             imageUrl = await generateFreeImage(finalImagePrompt, request.imageStyle);
         } catch (imgError) {
-            console.warn("[Service] Image generation failed, using placeholder", imgError);
+            console.warn("Image gen failed", imgError);
             imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
         }
     }
@@ -372,7 +413,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     try {
         audioUrl = await generateElevenLabsAudio(content);
     } catch (audioError) {
-        console.warn("[Service] Audio generation failed globally:", audioError);
+        console.warn("Audio gen failed", audioError);
     }
 
     return {
@@ -388,11 +429,13 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     };
 
   } catch (error: any) {
-    console.error("[Service] Content generation critical failure:", error);
+    console.error("[Service] Critical Failure:", error);
     
-    if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('401')) {
-        return getMockStory(request.topic);
+    // Si c'est une erreur de clé ou d'authentification explicite qui a filtré
+    if (error.message?.includes('API key') || error.message?.includes('401')) {
+        return getConfigurationHelpStory(request.topic);
     }
-    throw new Error("Le service IA est momentanément indisponible. Veuillez vérifier votre connexion ou réessayer plus tard.");
+    
+    throw new Error(`Erreur: ${error.message || "Le service IA est indisponible."}`);
   }
 };
