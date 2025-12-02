@@ -12,7 +12,7 @@ interface HistoryListProps {
 const HistoryList: React.FC<HistoryListProps> = ({ history, onSelect, onClear, onBack }) => {
   if (history.length === 0) {
       return (
-        <div className="w-full max-w-7xl mx-auto mt-16 text-center animate-in fade-in duration-700">
+        <div className="w-full max-w-7xl mx-auto mt-8 md:mt-16 text-center animate-in fade-in duration-700 px-4">
             {onBack && (
                 <button 
                     onClick={onBack}
@@ -22,9 +22,9 @@ const HistoryList: React.FC<HistoryListProps> = ({ history, onSelect, onClear, o
                     Retour à l'accueil
                 </button>
             )}
-            <div className="p-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 border-dashed flex flex-col items-center">
-                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                    <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+            <div className="p-8 md:p-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 border-dashed flex flex-col items-center">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                    <svg className="w-8 h-8 md:w-10 md:h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Historique vide</h3>
                 <p className="text-slate-500 dark:text-slate-400">Vous n'avez pas encore généré de leçons.</p>
@@ -80,15 +80,15 @@ const HistoryList: React.FC<HistoryListProps> = ({ history, onSelect, onClear, o
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {history.map((item) => (
           <div 
             key={item.id}
             onClick={() => onSelect(item)}
-            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer relative overflow-hidden"
+            className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer relative overflow-hidden flex flex-col h-full"
           >
             <div className="flex justify-between items-start mb-3">
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 shrink-0">
                 {getMediaIcon(item.mediaType)}
               </span>
               <span className="text-xs font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
@@ -101,16 +101,16 @@ const HistoryList: React.FC<HistoryListProps> = ({ history, onSelect, onClear, o
               {item.title}
             </h4>
 
-            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
+            <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 flex-grow">
                {item.content.substring(0, 100).replace(/[*#_]/g, '')}...
             </p>
 
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mt-auto">
+              <span className="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 truncate max-w-[120px]">
                 {item.genre}
               </span>
               {item.videoError && (
-                 <span className="px-2 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-xs font-medium text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                 <span className="px-2 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-xs font-medium text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1 shrink-0">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     Vidéo
                  </span>

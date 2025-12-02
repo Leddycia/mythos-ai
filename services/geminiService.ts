@@ -1,8 +1,7 @@
 
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { StoryRequest, GeneratedStory, StoryGenre, MediaType, ImageStyle, VideoFormat } from '../types';
-import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, GEMINI_API_KEY } from '../constants';
-
+import { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } from '../constants';
 
 // --- SERVICE AUDIO ELEVENLABS ---
 
@@ -12,6 +11,8 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         .replace(/\[.*?\]/g, '')
         .replace(/^(Introduction|Conclusion|Titre|Concept|Résumé)\s*:/gmi, '')
         .trim();
+
+    if (!cleanText) return "";
 
     try {
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -31,8 +32,12 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         });
 
         if (!response.ok) {
-            console.warn("ElevenLabs limit reached or error, falling back...");
-            return ""; // Retourner vide pour gérer le fallback silencieusement
+            // Tentative de lecture du message d'erreur détaillé de l'API
+            const errorBody = await response.text().catch(() => "Détails indisponibles");
+            console.error(`[ElevenLabs API Error] Status: ${response.status}. Details: ${errorBody}`);
+            
+            // Si erreur de quota ou d'auth, on retourne vide pour fallback silencieux
+            return ""; 
         }
 
         const blob = await response.blob();
@@ -40,12 +45,15 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
+            reader.onerror = (e) => {
+                console.error("[ElevenLabs] Erreur conversion Blob vers Base64", e);
+                reject(e);
+            };
             reader.readAsDataURL(blob);
         });
 
     } catch (error) {
-        console.error("Erreur génération audio ElevenLabs:", error);
+        console.error("[ElevenLabs Network Error] Impossible de contacter le service audio:", error);
         return "";
     }
 };
@@ -58,8 +66,13 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&model=flux&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
 
     try {
-        // On vérifie juste que l'URL est accessible
+        // On vérifie que l'URL est accessible et renvoie bien une image
         const response = await fetch(imageUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP Pollinations: ${response.status} ${response.statusText}`);
+        }
+
         const blob = await response.blob();
         
         return new Promise((resolve, reject) => {
@@ -68,11 +81,14 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
                 const base64Url = reader.result as string;
                 resolve(base64Url);
             };
-            reader.onerror = reject;
+            reader.onerror = (e) => {
+                console.error("[Pollinations] Erreur lecture Blob image", e);
+                reject(e);
+            };
             reader.readAsDataURL(blob);
         });
     } catch (error) {
-        console.error("Erreur génération image gratuite:", error);
+        console.error("[Pollinations API Error] Échec génération image:", error);
         // Fallback image si l'API échoue
         return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
     }
@@ -89,7 +105,7 @@ const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<st
 // --- MOCK DATA FOR DEMO MODE ---
 const getMockStory = (topic: string): GeneratedStory => ({
     title: `Démo : ${topic}`,
-    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée.
+    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée ou une erreur critique est survenue.
     
     MythosAI fonctionne normalement en se connectant à l'intelligence artificielle de Google. En attendant que vous configuriez votre clé API, voici un exemple de ce à quoi ressemble une leçon.
     
@@ -119,6 +135,7 @@ export const regenerateStoryImage = async (
   try {
       imageUrl = await generateFreeImage(currentPrompt, style);
   } catch (e) {
+      console.warn("Erreur régénération image, utilisation fallback");
       imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
   }
 
@@ -181,6 +198,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     1. NE PAS utiliser de titres explicites comme "Introduction", "Développement", "Concept Clé".
     2. Le texte doit couler naturellement, comme si une personne parlait.
     3. PAS de listes à puces ou de numérotation excessive.
+    4. INTERDICTION d'utiliser des émojis dans le texte ou les suggestions.
     `;
 
     if (isVideoMode) {
@@ -283,7 +301,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
             const finalImagePrompt = `${imagePromptText}, ${cultureStyle}`;
             imageUrl = await generateFreeImage(finalImagePrompt, request.imageStyle);
         } catch (imgError) {
-            console.warn("Image generation failed, using placeholder");
+            console.warn("[Service] Image generation failed, using placeholder", imgError);
             imageUrl = "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
         }
     }
@@ -301,8 +319,11 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let audioUrl: string | undefined;
     try {
         audioUrl = await generateElevenLabsAudio(content);
+        if (!audioUrl) {
+           console.warn("[Service] ElevenLabs a retourné une réponse vide (quota ?)");
+        }
     } catch (audioError) {
-        console.warn("Audio generation failed");
+        console.warn("[Service] Audio generation failed globally:", audioError);
     }
 
     return {
@@ -318,10 +339,14 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     };
 
   } catch (error: any) {
-    console.error("Content generation failed:", error);
+    console.error("[Service] Content generation critical failure:", error);
+    
+    // Détection d'erreurs d'autorisation
     if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('401')) {
         return getMockStory(request.topic);
     }
-    throw new Error("Une erreur est survenue. Le mode démo a été activé.");
+    
+    // Pour toute autre erreur, on ne crash pas, on renvoie une version dégradée si possible, sinon une erreur lisible
+    throw new Error("Le service IA est momentanément indisponible. Veuillez vérifier votre connexion ou réessayer plus tard.");
   }
 };

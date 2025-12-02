@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { GeneratedStory, ImageStyle, MediaType, ChatMessage, VideoFormat } from '../types';
@@ -27,8 +28,8 @@ const MessageBlock: React.FC<MessageBlockProps> = ({
       if (msg.role === 'user') {
           return (
               <div className="flex justify-end animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="bg-indigo-600 text-white px-6 py-4 rounded-2xl rounded-tr-sm max-w-[80%] shadow-md">
-                      <p className="text-lg">{msg.content}</p>
+                  <div className="bg-indigo-600 text-white px-5 py-3 md:px-6 md:py-4 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[80%] shadow-md">
+                      <p className="text-base md:text-lg">{msg.content}</p>
                   </div>
               </div>
           );
@@ -37,17 +38,17 @@ const MessageBlock: React.FC<MessageBlockProps> = ({
       const story = msg.aiResponse!;
       
       return (
-        <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden relative transition-colors duration-300 animate-in fade-in slide-in-from-left-4 duration-500 ${isInitial ? 'mb-12 border-indigo-200 dark:border-indigo-800' : ''}`}>
+        <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden relative transition-colors duration-300 animate-in fade-in slide-in-from-left-4 duration-500 ${isInitial ? 'mb-8 md:mb-12 border-indigo-200 dark:border-indigo-800' : ''}`}>
             {isInitial && <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-indigo-500" />}
             
-            <div className="p-6 md:p-8">
+            <div className="p-5 md:p-8">
                 {/* Header (Titre + Audio) */}
                 <div className="flex flex-col gap-4 mb-6">
-                    <h3 className={`font-serif font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-fuchsia-600 dark:from-indigo-200 dark:to-white leading-tight ${isInitial ? 'text-3xl md:text-4xl text-center' : 'text-xl md:text-2xl'}`}>
+                    <h3 className={`font-serif font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-fuchsia-600 dark:from-indigo-200 dark:to-white leading-tight ${isInitial ? 'text-2xl md:text-4xl text-center' : 'text-xl md:text-2xl'}`}>
                         {story.title}
                     </h3>
                     {story.audioUrl && (
-                        <div className="w-full max-w-sm">
+                        <div className="w-full max-w-sm mx-auto md:mx-0">
                             <AudioPlayer pcmBase64={story.audioUrl} />
                         </div>
                     )}
@@ -79,7 +80,7 @@ const MessageBlock: React.FC<MessageBlockProps> = ({
                     )}
 
                     {/* Text Section */}
-                    <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
+                    <div className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none">
                         <div className="font-serif leading-relaxed text-slate-700 dark:text-slate-300">
                             <ReactMarkdown>{story.content}</ReactMarkdown>
                         </div>
@@ -88,9 +89,9 @@ const MessageBlock: React.FC<MessageBlockProps> = ({
 
                 {/* Toolbar (Download) */}
                 <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <button onClick={() => onDownloadText(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Texte</button>
-                    {story.imageUrl && <button onClick={() => onDownloadImage(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Image</button>}
-                    {story.audioUrl && <button onClick={() => onDownloadAudio(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Audio</button>}
+                    <button onClick={() => onDownloadText(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Texte</button>
+                    {story.imageUrl && <button onClick={() => onDownloadImage(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Image</button>}
+                    {story.audioUrl && <button onClick={() => onDownloadAudio(story)} className="text-xs text-slate-500 hover:text-indigo-600 flex items-center gap-1 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Audio</button>}
                 </div>
 
                 {/* Suggestion Chips */}
@@ -98,7 +99,7 @@ const MessageBlock: React.FC<MessageBlockProps> = ({
                    <div className="mt-4 flex flex-wrap gap-2">
                       <button 
                         onClick={() => onSendMessage(story.nextStepSuggestion!)}
-                        className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-full text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-800 text-left"
+                        className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-full text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-800 text-left w-full sm:w-auto"
                       >
                          ✨ {story.nextStepSuggestion}
                       </button>
@@ -113,11 +114,12 @@ interface StoryDisplayProps {
   initialStory: GeneratedStory;
   onBack: () => void;
   onSendMessage: (message: string) => void;
+  onEndSession: () => void;
   chatHistory: ChatMessage[];
   isThinking: boolean;
 }
 
-const StoryDisplay: React.FC<StoryDisplayProps> = ({ initialStory, onBack, onSendMessage, chatHistory, isThinking }) => {
+const StoryDisplay: React.FC<StoryDisplayProps> = ({ initialStory, onBack, onSendMessage, onEndSession, chatHistory, isThinking }) => {
   const [userInput, setUserInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -182,7 +184,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ initialStory, onBack, onSen
   const suggestion = lastAiMessage?.aiResponse?.nextStepSuggestion;
 
   return (
-    <div className="max-w-4xl mx-auto pb-32">
+    <div className="max-w-4xl mx-auto pb-48 lg:pb-40">
       {/* Header Navigation */}
       <div className="mb-4 sticky top-4 z-30 flex justify-between items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <Button variant="ghost" onClick={onBack} className="!py-2 !px-3 text-sm">
@@ -192,7 +194,7 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ initialStory, onBack, onSen
         <div className="w-8"></div>
       </div>
 
-      <div className="space-y-8 px-2">
+      <div className="space-y-6 md:space-y-8 px-2">
          {/* Initial Lesson */}
          <MessageBlock 
             msg={{ role: 'ai', content: '', aiResponse: initialStory }} 
@@ -229,38 +231,50 @@ const StoryDisplay: React.FC<StoryDisplayProps> = ({ initialStory, onBack, onSen
              </div>
          )}
          
+         {/* Bouton Fin de Session */}
+         <div className="flex justify-center py-6">
+            <button 
+                onClick={onEndSession}
+                className="group flex items-center gap-2 px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 text-sm font-medium shadow-sm hover:shadow-md"
+            >
+                <span className="w-2 h-2 rounded-full bg-slate-400 group-hover:bg-red-500 transition-colors"></span>
+                Terminer la session interactive
+            </button>
+         </div>
+
          <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area (Sticky Bottom) */}
-      <div className="fixed bottom-0 left-0 lg:left-64 right-0 p-4 bg-gradient-to-t from-slate-50 dark:from-[#0B0F19] via-slate-50 dark:via-[#0B0F19] to-transparent z-40">
+      <div className="fixed bottom-0 left-0 lg:left-64 right-0 p-4 pb-4 md:pb-6 bg-gradient-to-t from-slate-50 dark:from-[#0B0F19] via-slate-50 dark:via-[#0B0F19] to-transparent z-40 backdrop-blur-[2px]">
           <div className="max-w-4xl mx-auto">
               {/* Suggestion Rapide (Si disponible et pas de chargement) */}
               {!isThinking && suggestion && chatHistory.length === 0 && (
                    <div className="mb-4 flex justify-center animate-in slide-in-from-bottom-2 fade-in">
                         <button 
                             onClick={() => onSendMessage(suggestion)}
-                            className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white px-6 py-3 rounded-full font-medium shadow-lg hover:shadow-indigo-500/30 transform hover:-translate-y-1 transition-all flex items-center gap-2"
+                            className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white px-5 py-3 md:px-6 md:py-3 rounded-full font-medium shadow-lg hover:shadow-indigo-500/30 transform hover:-translate-y-1 transition-all flex items-center gap-2 text-sm md:text-base w-full sm:w-auto justify-center"
                         >
-                            <span>Continuer : {suggestion}</span>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            <span className="truncate max-w-[250px] sm:max-w-none">Continuer : {suggestion}</span>
+                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                         </button>
                    </div>
               )}
 
-              <form onSubmit={handleSubmit} className="relative flex gap-2 items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded-2xl shadow-xl">
+              <form onSubmit={handleSubmit} className="relative flex gap-2 items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded-2xl shadow-2xl">
                   <input 
                     type="text" 
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Posez une question, répondez au quiz, ou continuez..."
-                    className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white px-4 py-3 placeholder-slate-400"
+                    placeholder="Posez une question..."
+                    className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white px-3 md:px-4 py-3 placeholder-slate-400 text-base"
                     disabled={isThinking}
+                    style={{ fontSize: '16px' }} // Prevent iOS zoom
                   />
                   <button 
                     type="submit"
                     disabled={!userInput.trim() || isThinking}
-                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors"
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-colors shrink-0"
                   >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>

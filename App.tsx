@@ -82,8 +82,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-        if (window.innerWidth < 1024) {
-            setIsSidebarOpen(false);
+        if (window.innerWidth >= 1024) {
+             // Sur desktop, on gère la sidebar via le layout, pas via l'état overlay
+             setIsSidebarOpen(false); 
         }
     };
     window.addEventListener('resize', handleResize);
@@ -196,6 +197,8 @@ const App: React.FC = () => {
             ...lastRequest,
             topic: userMessage, // The prompt is the user's question
             isFollowUp: true,
+            // Force text only for chat interactions to be faster
+            mediaType: MediaType.TEXT_ONLY,
             conversationHistory: conversationContext
         };
 
@@ -233,7 +236,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-white transition-colors duration-300 flex flex-col relative overflow-x-hidden">
+    <div className="min-h-[100dvh] text-slate-900 dark:text-white transition-colors duration-300 flex flex-col relative overflow-x-hidden">
       
       {/* Background Layer */}
       <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
@@ -251,7 +254,7 @@ const App: React.FC = () => {
         onChangeView={(view) => {
             setCurrentView(view as ViewType);
             setStory(null);
-            if (window.innerWidth < 1024) setIsSidebarOpen(false);
+            setIsSidebarOpen(false);
         }}
         onLogout={handleLogout}
         userInitial={user.name.charAt(0)}
@@ -261,24 +264,32 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:pl-64' : 'pl-0'} flex flex-col min-h-screen relative z-10`}>
+      <main className={`flex-1 transition-all duration-300 lg:pl-64 flex flex-col min-h-[100dvh] relative z-10`}>
         
-        <div className="sticky top-0 z-40 p-4 pointer-events-none">
+        {/* Mobile Header with Hamburger */}
+        <div className="lg:hidden sticky top-0 z-40 p-4 flex justify-between items-center pointer-events-none">
             <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="pointer-events-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                onClick={() => setIsSidebarOpen(true)}
+                className="pointer-events-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                aria-label="Ouvrir le menu"
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
+            
+            {/* Logo Mobile Optional */}
+            <span className="lg:hidden font-serif font-bold text-lg text-slate-900 dark:text-white pointer-events-auto bg-white/30 dark:bg-black/30 backdrop-blur-sm px-3 py-1 rounded-full">
+                {APP_NAME}
+            </span>
         </div>
 
-        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 -mt-10 lg:-mt-16 pt-4 lg:pt-20">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-4 lg:pt-12">
             
             {story ? (
                 <StoryDisplay 
                     initialStory={story}
                     chatHistory={chatHistory}
                     onBack={handleResetStory} 
+                    onEndSession={handleResetStory}
                     onSendMessage={handleChatInteraction}
                     isThinking={loading}
                 />
@@ -302,23 +313,23 @@ const App: React.FC = () => {
                                 Retour à l'accueil
                             </button>
 
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-6 md:p-8 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
+                            <div className="bg-white/60 dark:bg-slate-900/60 p-5 md:p-8 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
                                 <div className="space-y-6">
                                     <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-6">
-                                        <h2 className="text-3xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
-                                        <p className="text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
+                                        <h2 className="text-2xl md:text-3xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
+                                        <p className="text-sm md:text-base text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
                                     </div>
 
                                     <div className="space-y-6">
                                         <Input 
                                             label="Sujet, Concept ou Titre" 
-                                            placeholder="ex: La Photosynthèse, La Révolution Haïtienne, Le Courage..."
+                                            placeholder="ex: La Photosynthèse, La Révolution..."
                                             value={topic}
                                             onChange={(e) => setTopic(e.target.value)}
-                                            className="!text-xl !py-4"
+                                            className="!text-lg !py-3 md:!py-4"
                                         />
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                             <Select 
                                                 label="Type de contenu" 
                                                 options={STORY_GENRES}
@@ -333,7 +344,7 @@ const App: React.FC = () => {
                                             />
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                             <Select 
                                                 label="Format du Support"
                                                 options={MEDIA_TYPES}
@@ -366,27 +377,27 @@ const App: React.FC = () => {
                                             onChange={(e) => setLanguage(e.target.value)}
                                         />
 
-                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors"
+                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors touch-manipulation"
                                             onClick={() => setHaitianCulture(!haitianCulture)}
                                         >
-                                            <div className={`w-12 h-6 rounded-full relative transition-colors ${haitianCulture ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                            <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${haitianCulture ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
                                                 <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${haitianCulture ? 'left-7' : 'left-1'}`} />
                                             </div>
                                             <div>
-                                                <h4 className="font-semibold text-slate-900 dark:text-white">Mode Culturel Haïtien</h4>
+                                                <h4 className="font-semibold text-slate-900 dark:text-white text-sm md:text-base">Mode Culturel Haïtien</h4>
                                                 <p className="text-xs text-slate-500 dark:text-slate-400">Intégrer des références locales.</p>
                                             </div>
                                         </div>
 
                                         {error && (
-                                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                {error}
+                                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center gap-2 animate-pulse">
+                                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span>{error}</span>
                                             </div>
                                         )}
                                         
                                         <Button 
-                                            className="w-full !py-4 text-lg mt-6 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40" 
+                                            className="w-full !py-4 text-lg mt-6 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 active:scale-[0.98]" 
                                             onClick={handleGenerate}
                                             isLoading={loading}
                                         >
@@ -429,7 +440,7 @@ const App: React.FC = () => {
             )}
         </div>
 
-        <footer className="w-full p-6 text-center text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50 text-sm bg-white/30 dark:bg-black/20 backdrop-blur-md">
+        <footer className="w-full p-6 text-center text-slate-400 dark:text-slate-600 border-t border-slate-200/50 dark:border-slate-800/50 text-xs md:text-sm bg-white/30 dark:bg-black/20 backdrop-blur-md">
             <p className="font-medium">Développé par <span className="text-indigo-500 dark:text-indigo-400">B.A BA-Tech</span></p>
         </footer>
       </main>
