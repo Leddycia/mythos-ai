@@ -52,6 +52,7 @@ export interface StoryRequest {
   videoFormat?: VideoFormat;
   isFollowUp?: boolean; // Indique si c'est la suite d'une conversation
   conversationHistory?: { role: string; text: string }[]; // Historique complet pour le contexte
+  isFastMode?: boolean; // Option pour utiliser Flash-Lite
 }
 
 export interface QuizQuestion {

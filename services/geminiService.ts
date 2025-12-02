@@ -262,6 +262,11 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     const isVideoMode = request.mediaType === MediaType.VIDEO;
     const isConversation = request.isFollowUp;
 
+    // SÉLECTION DU MODÈLE
+    // Si isFastMode est actif, on utilise 'gemini-2.5-flash-lite-latest' (alias gemini flash lite)
+    // Sinon on utilise le standard 'gemini-2.5-flash'
+    const modelName = request.isFastMode ? 'gemini-2.5-flash-lite-latest' : 'gemini-2.5-flash';
+
     let systemInstruction = "";
     let taskDescription = "";
     let constraints = "";
@@ -359,7 +364,7 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
         try {
             const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
+              model: modelName,
               contents: prompt,
               config: { responseMimeType: "application/json" }
             });

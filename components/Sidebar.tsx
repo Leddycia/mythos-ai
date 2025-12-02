@@ -45,11 +45,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     <>
         {/* Mobile Backdrop Overlay - High Z-Index */}
         <div 
-            className={`fixed inset-0 bg-black/60 z-[60] lg:hidden backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+            className={`fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
             onClick={onClose}
         />
 
-        <div className={`h-screen w-72 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed left-0 top-0 z-[70] transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 shadow-2xl lg:shadow-none`}>
+        <div className={`h-screen w-72 lg:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed left-0 top-0 z-[70] transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl lg:shadow-xl`}>
         
         {/* Logo Area */}
         <div className="p-6 flex items-center justify-between">
@@ -59,8 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <span className="font-serif font-bold text-xl text-slate-900 dark:text-white tracking-tight">{APP_NAME}</span>
             </div>
-            {/* Close button for mobile */}
-            <button onClick={onClose} className="lg:hidden text-slate-500 hover:text-slate-800 dark:hover:text-white p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            {/* Close button */}
+            <button onClick={onClose} className="text-slate-500 hover:text-slate-800 dark:hover:text-white p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>

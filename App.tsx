@@ -81,17 +81,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-        if (window.innerWidth >= 1024) {
-             // Sur desktop, on gère la sidebar via le layout, pas via l'état overlay
-             setIsSidebarOpen(false); 
-        }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const handleLogin = (email: string, name: string) => {
     const newUser = { email, name };
     setUser(newUser);
@@ -121,6 +110,7 @@ const App: React.FC = () => {
   const [videoFormat, setVideoFormat] = useState<VideoFormat>(VideoFormat.MP4);
   const [language, setLanguage] = useState<string>('Français');
   const [haitianCulture, setHaitianCulture] = useState(false);
+  const [isFastMode, setIsFastMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const saveToHistory = (newStory: GeneratedStory, request: StoryRequest) => {
@@ -151,7 +141,8 @@ const App: React.FC = () => {
         includeHaitianCulture: haitianCulture,
         language,
         mediaType,
-        videoFormat: mediaType === MediaType.VIDEO ? videoFormat : undefined
+        videoFormat: mediaType === MediaType.VIDEO ? videoFormat : undefined,
+        isFastMode
     };
 
     if (!request.topic) {
@@ -200,7 +191,9 @@ const App: React.FC = () => {
             isFollowUp: true,
             // Force text only for chat interactions to be faster
             mediaType: MediaType.TEXT_ONLY,
-            conversationHistory: conversationContext
+            conversationHistory: conversationContext,
+            // Use fast mode for chat if enabled originally
+            isFastMode: lastRequest.isFastMode
         };
 
         const result = await generateFullStory(followUpRequest);
@@ -255,7 +248,7 @@ const App: React.FC = () => {
         onChangeView={(view) => {
             setCurrentView(view as ViewType);
             setStory(null);
-            setIsSidebarOpen(false);
+            setIsSidebarOpen(false); // Close sidebar on selection on mobile
         }}
         onLogout={handleLogout}
         userInitial={user.name.charAt(0)}
@@ -265,22 +258,26 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className={`flex-1 transition-all duration-300 lg:pl-64 flex flex-col min-h-[100dvh] relative z-10`}>
+      <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:pl-64' : ''} flex flex-col min-h-[100dvh] relative z-10`}>
         
-        {/* Mobile Header with Hamburger ONLY (No Text) */}
-        <div className="lg:hidden sticky top-0 z-40 p-4 flex justify-between items-center pointer-events-none">
+        {/* Mobile & Desktop Header Trigger */}
+        <div className="sticky top-0 z-40 p-4 flex justify-between items-center pointer-events-none">
             <button 
-                onClick={() => setIsSidebarOpen(true)}
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="pointer-events-auto bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                aria-label="Ouvrir le menu"
+                aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                {isSidebarOpen ? (
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                ) : (
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                )}
             </button>
             {/* Logo removed from top right as requested */}
             <div></div>
         </div>
 
-        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-4 lg:pt-12">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-4">
             
             {story ? (
                 <StoryDisplay 
@@ -379,16 +376,35 @@ const App: React.FC = () => {
                                             onChange={(e) => setLanguage(e.target.value)}
                                             className="!text-lg"
                                         />
-
-                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-5 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors touch-manipulation"
-                                            onClick={() => setHaitianCulture(!haitianCulture)}
-                                        >
-                                            <div className={`w-14 h-7 rounded-full relative transition-colors shrink-0 ${haitianCulture ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
-                                                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${haitianCulture ? 'left-8' : 'left-1'}`} />
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Haitian Culture Toggle */}
+                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-500/20 rounded-xl p-5 flex items-center gap-4 cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors touch-manipulation"
+                                                onClick={() => setHaitianCulture(!haitianCulture)}
+                                            >
+                                                <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${haitianCulture ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${haitianCulture ? 'left-7' : 'left-1'}`} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-900 dark:text-white text-base">Mode Culturel Haïtien</h4>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Références locales</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="font-semibold text-slate-900 dark:text-white text-base md:text-lg">Mode Culturel Haïtien</h4>
-                                                <p className="text-sm text-slate-500 dark:text-slate-400">Intégrer des références locales.</p>
+
+                                            {/* Fast Mode Toggle */}
+                                            <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-500/20 rounded-xl p-5 flex items-center gap-4 cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors touch-manipulation"
+                                                onClick={() => setIsFastMode(!isFastMode)}
+                                            >
+                                                <div className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${isFastMode ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-sm ${isFastMode ? 'left-7' : 'left-1'}`} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                                                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                        Mode Rapide
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Réponses instantanées (Flash Lite)</p>
+                                                </div>
                                             </div>
                                         </div>
 
