@@ -21,7 +21,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
         <div className="relative z-10 flex flex-col items-center px-4">
           
           {/* BIG APP TITLE */}
-          <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-indigo-400 animate-in fade-in zoom-in-50 duration-1000 pb-4 drop-shadow-sm leading-tight">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-serif font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600 dark:from-indigo-400 dark:via-fuchsia-400 dark:to-indigo-400 animate-in fade-in zoom-in-50 duration-1000 pb-4 drop-shadow-sm leading-tight">
             MythosAI
           </h1>
 
@@ -34,11 +34,11 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
             Bonjour <strong>{userName}</strong>. Transformez n'importe quel sujet en une expérience interactive : leçons, histoires, images et vidéos générées instantanément par l'IA.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-12 w-full sm:w-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 pt-12 w-full sm:w-auto px-4">
             <Button 
               onClick={onStartCreate} 
               variant="secondary"
-              className="!py-5 !px-10 text-xl shadow-xl shadow-fuchsia-500/20 w-full sm:w-auto transform hover:scale-105 transition-transform"
+              className="!py-4 !px-8 md:!py-5 md:!px-10 text-lg md:text-xl shadow-xl shadow-fuchsia-500/20 w-full sm:w-auto transform hover:scale-105 transition-transform"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
               Créer une leçon
@@ -46,7 +46,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
             <Button 
               onClick={onViewHistory} 
               variant="outline" 
-              className="!py-5 !px-10 text-xl w-full sm:w-auto hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="!py-4 !px-8 md:!py-5 md:!px-10 text-lg md:text-xl w-full sm:w-auto hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               Voir mes créations
@@ -56,7 +56,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
       </div>
 
       {/* --- HOW IT WORKS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative px-4 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10 relative px-4 max-w-6xl mx-auto">
          {/* Connector Line (Desktop only) */}
          <div className="hidden md:block absolute top-14 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-slate-200 via-indigo-200 to-slate-200 dark:from-slate-800 dark:via-indigo-900 dark:to-slate-800 z-0"></div>
 
@@ -89,14 +89,14 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
 
       {/* --- BENTO GRID FEATURES --- */}
       <div className="px-4 max-w-7xl mx-auto">
-        <h2 className="text-4xl md:text-6xl font-serif font-bold text-center mb-16 text-slate-900 dark:text-white">
+        <h2 className="text-3xl sm:text-4xl md:text-6xl font-serif font-bold text-center mb-10 md:mb-16 text-slate-900 dark:text-white">
           Une technologie <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-indigo-600">révolutionnaire</span>
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6 grid-rows-[auto_auto_auto] md:grid-rows-[300px_300px]">
            
            {/* Card 1: Multimodal (Large) */}
-           <div className="md:col-span-4 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden group shadow-xl">
+           <div className="md:col-span-4 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden group shadow-xl min-h-[300px]">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-white/20 transition-colors"></div>
               <div className="relative z-10 h-full flex flex-col justify-end">
                  <div className="bg-white/20 w-fit p-3 rounded-xl mb-4 backdrop-blur-md">
@@ -108,7 +108,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
            </div>
 
            {/* Card 2: Adaptatif */}
-           <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 relative overflow-hidden group hover:border-indigo-500 transition-colors shadow-lg">
+           <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 relative overflow-hidden group hover:border-indigo-500 transition-colors shadow-lg min-h-[250px]">
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-50/50 dark:to-indigo-900/10"></div>
               <div className="relative z-10 h-full flex flex-col justify-between">
                  <div className="bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-600 dark:text-fuchsia-400 w-fit p-3 rounded-xl">
@@ -122,7 +122,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
            </div>
 
            {/* Card 3: Culture Haiti */}
-           <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 relative overflow-hidden group hover:border-red-500 transition-colors shadow-lg">
+           <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 relative overflow-hidden group hover:border-red-500 transition-colors shadow-lg min-h-[250px]">
                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                    <svg className="w-32 h-32 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                </div>
@@ -138,7 +138,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ userName, onStartCreate, onVi
            </div>
 
            {/* Card 4: Interactive Quiz (Medium) */}
-           <div className="md:col-span-4 bg-slate-100 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 relative overflow-hidden flex items-center shadow-lg">
+           <div className="md:col-span-4 bg-slate-100 dark:bg-slate-800/50 rounded-3xl p-8 md:p-12 relative overflow-hidden flex items-center shadow-lg min-h-[300px]">
                <div className="flex-1 relative z-10">
                    <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Quiz Interactif</h3>
                    <p className="text-lg text-slate-600 dark:text-slate-300 mb-6 max-w-lg">

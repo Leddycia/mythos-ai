@@ -32,11 +32,8 @@ export const generateElevenLabsAudio = async (text: string): Promise<string> => 
         });
 
         if (!response.ok) {
-            // Tentative de lecture du message d'erreur détaillé de l'API
             const errorBody = await response.text().catch(() => "Détails indisponibles");
             console.error(`[ElevenLabs API Error] Status: ${response.status}. Details: ${errorBody}`);
-            
-            // Si erreur de quota ou d'auth, on retourne vide pour fallback silencieux
             return ""; 
         }
 
@@ -66,30 +63,17 @@ const generateFreeImage = async (prompt: string, style: ImageStyle): Promise<str
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&model=flux&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
 
     try {
-        // On vérifie que l'URL est accessible et renvoie bien une image
         const response = await fetch(imageUrl);
-        
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP Pollinations: ${response.status} ${response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error(`Erreur HTTP Pollinations: ${response.status} ${response.statusText}`);
         const blob = await response.blob();
-        
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64Url = reader.result as string;
-                resolve(base64Url);
-            };
-            reader.onerror = (e) => {
-                console.error("[Pollinations] Erreur lecture Blob image", e);
-                reject(e);
-            };
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = (e) => reject(e);
             reader.readAsDataURL(blob);
         });
     } catch (error) {
         console.error("[Pollinations API Error] Échec génération image:", error);
-        // Fallback image si l'API échoue
         return "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1000";
     }
 }
@@ -105,13 +89,7 @@ const simulateVideoFromImage = async (base64ImageWithHeader: string): Promise<st
 // --- MOCK DATA FOR DEMO MODE ---
 const getMockStory = (topic: string): GeneratedStory => ({
     title: `Démo : ${topic}`,
-    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée ou une erreur critique est survenue.
-    
-    MythosAI fonctionne normalement en se connectant à l'intelligence artificielle de Google. En attendant que vous configuriez votre clé API, voici un exemple de ce à quoi ressemble une leçon.
-    
-    Le sujet demandé était : **${topic}**.
-    
-    Dans un environnement réel, l'IA aurait expliqué ce concept en détail, adapté à votre niveau, avec des exemples pertinents et une narration fluide.`,
+    content: `Ceci est une histoire de démonstration générée car la clé API Google Gemini n'a pas été détectée.`,
     imagePrompt: "Futuristic artificial intelligence glowing brain interface, digital art",
     imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=1000",
     isVideoSimulated: true,
@@ -166,10 +144,10 @@ export const generateQuizFromContent = async (content: string, ageGroup: string)
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
-  Génère un Quiz interactif (QCM) de 5 questions basé EXCLUSIVEMENT sur le contenu suivant.
+  Génère un Quiz interactif (QCM) de 5 questions basé EXCLUSIVEMENT sur le contenu ci-dessous (qui peut être une leçon simple ou un historique de conversation complet).
   
-  CONTENU:
-  ${content.substring(0, 4000)}
+  CONTENU À ÉVALUER:
+  ${content.substring(0, 15000)}
 
   CIBLE: ${ageGroup}
 
@@ -177,7 +155,7 @@ export const generateQuizFromContent = async (content: string, ageGroup: string)
   1. Retourne JSON uniquement.
   2. Chaque question doit avoir 3 choix de réponse.
   3. Fournis une explication courte pour la bonne réponse.
-  4. Varie les questions pour couvrir tout le sujet.
+  4. Varie les questions pour couvrir l'ensemble des points abordés dans la discussion.
   5. Génère exactement 5 questions.
 
   SCHEMA:
@@ -215,19 +193,27 @@ export const generateQuizFromContent = async (content: string, ageGroup: string)
         }
     });
 
-    const json = JSON.parse(response.text || '{}');
-    return json.questions || [];
+    let responseText = response.text || '';
+    responseText = responseText.replace(/```json|```/g, '').trim();
+
+    if (!responseText) return [];
+
+    const json = JSON.parse(responseText);
+    
+    if (json && Array.isArray(json.questions)) {
+        return json.questions;
+    }
+    return [];
+
   } catch (error) {
-    console.error("Erreur génération quiz:", error);
+    console.error("Erreur génération quiz (Parsing ou API):", error);
     return [];
   }
 };
 
 export const generateFullStory = async (request: StoryRequest): Promise<GeneratedStory> => {
-  // 1. RECUPERATION DE LA CLÉ API
   const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY;
 
-  // 2. MODE DÉMO / FALLBACK
   if (!apiKey || apiKey === 'undefined' || apiKey === '') {
       console.warn("⚠️ CLÉ MANQUANTE : Passage en mode DÉMO.");
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -237,8 +223,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
   const ai = new GoogleGenAI({ apiKey });
 
   try {
-    // === 1. TEXT GENERATION (Foundation) ===
-    
     const culturePrompt = request.includeHaitianCulture
       ? "IMPORTANT: Intégrez naturellement des références haïtiennes (lieux, proverbes, culture) dans le récit sans le forcer."
       : "";
@@ -252,7 +236,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     let constraints = "";
     let historyContext = "";
 
-    // Construction de l'historique de conversation
     if (request.conversationHistory && request.conversationHistory.length > 0) {
         const historyStr = request.conversationHistory.map(turn => 
             `${turn.role === 'user' ? 'Élève/Utilisateur' : 'Professeur Mythos'}: "${turn.text}"`
@@ -306,7 +289,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
             taskDescription = `Expliquez : "${request.topic}".`;
         }
     } else {
-        // Mode Histoire
         if (isConversation) {
              systemInstruction = "Vous êtes le Maître du Donjon narratif. Le lecteur réagit à l'histoire. Continuez l'aventure en prenant en compte sa réponse.";
              taskDescription = `L'utilisateur dit : "${request.topic}". Continuez l'histoire.`;
@@ -366,7 +348,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
     const imagePromptText = textData.imagePrompt || `Illustration of ${request.topic}`;
     const nextStepSuggestion = textData.nextStepSuggestion || "Continuer...";
 
-    // === 2. IMAGE GENERATION (API Gratuite - Pollinations) ===
     let imageUrl: string | undefined;
     if (request.mediaType !== MediaType.TEXT_ONLY) {
         try {
@@ -379,7 +360,6 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
         }
     }
 
-    // === 3. VIDEO GENERATION (SIMULATION) ===
     let videoUrl: string | undefined;
     let isVideoSimulated = false;
     
@@ -388,13 +368,9 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
          isVideoSimulated = true;
     }
 
-    // === 4. AUDIO GENERATION (ElevenLabs) ===
     let audioUrl: string | undefined;
     try {
         audioUrl = await generateElevenLabsAudio(content);
-        if (!audioUrl) {
-           console.warn("[Service] ElevenLabs a retourné une réponse vide (quota ?)");
-        }
     } catch (audioError) {
         console.warn("[Service] Audio generation failed globally:", audioError);
     }
@@ -414,12 +390,9 @@ export const generateFullStory = async (request: StoryRequest): Promise<Generate
   } catch (error: any) {
     console.error("[Service] Content generation critical failure:", error);
     
-    // Détection d'erreurs d'autorisation
     if (error.message?.includes('API key') || error.message?.includes('403') || error.message?.includes('401')) {
         return getMockStory(request.topic);
     }
-    
-    // Pour toute autre erreur, on ne crash pas, on renvoie une version dégradée si possible, sinon une erreur lisible
     throw new Error("Le service IA est momentanément indisponible. Veuillez vérifier votre connexion ou réessayer plus tard.");
   }
 };

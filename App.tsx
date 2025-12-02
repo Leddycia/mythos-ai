@@ -310,20 +310,20 @@ const App: React.FC = () => {
                                 Retour à l'accueil
                             </button>
 
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-6 md:p-10 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
-                                <div className="space-y-8">
+                            <div className="bg-white/60 dark:bg-slate-900/60 p-5 md:p-10 rounded-3xl border border-white/50 dark:border-slate-800/50 shadow-2xl backdrop-blur-xl">
+                                <div className="space-y-6 md:space-y-8">
                                     <div className="space-y-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-6">
                                         <h2 className="text-3xl md:text-4xl font-bold font-serif text-slate-900 dark:text-white">Créer une Leçon</h2>
                                         <p className="text-base md:text-lg text-slate-500 dark:text-slate-400">Configurez l'IA pour générer un contenu sur mesure.</p>
                                     </div>
 
-                                    <div className="space-y-8">
+                                    <div className="space-y-6 md:space-y-8">
                                         <Input 
                                             label="Sujet, Concept ou Titre" 
                                             placeholder="ex: La Photosynthèse, La Révolution..."
                                             value={topic}
                                             onChange={(e) => setTopic(e.target.value)}
-                                            className="!text-xl !py-4"
+                                            className="!text-lg md:!text-xl !py-3 md:!py-4"
                                         />
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -399,7 +399,7 @@ const App: React.FC = () => {
                                         )}
                                         
                                         <Button 
-                                            className="w-full !py-5 text-xl mt-8 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 active:scale-[0.98]" 
+                                            className="w-full !py-4 md:!py-5 text-xl mt-8 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 active:scale-[0.98]" 
                                             onClick={handleGenerate}
                                             isLoading={loading}
                                         >
